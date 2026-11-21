@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Build outputs
 release/
@@ -18,7 +17,10 @@ build/
 .env.*.local
 *.pem
 *.key
+.license
+.db_seal
 .taqfeela-vault/
+scratch_*.txt
 vendor-tools/
 توليد_كود_تفعيل_العميل.html
 توليد_كود_تفعيل_العميل.bat
@@ -43,8 +45,9 @@ desktop.ini
 *~
 
 # Electron
-out/
-app/
+/out/
+/app/
+!/apps/mobile/app/
 
 # Testing
 coverage/

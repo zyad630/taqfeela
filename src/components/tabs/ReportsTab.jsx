@@ -543,7 +543,7 @@ export default function ReportsTab({
                             type="button"
                             onClick={() => {
                               setReportShiftId(s.id);
-                              setTimeout(() => handleGenerateReport('shifts'), 80);
+                              handleGenerateReport('shifts', null, null, null, s.id);
                             }}
                             style={{
                               background: isSelected ? 'rgba(16,185,129,0.22)' : 'rgba(255,255,255,0.04)',
@@ -626,9 +626,12 @@ export default function ReportsTab({
                   <div className="stat-card">
                     <div className="stat-icon">💰</div>
                     <div className="stat-data">
-                      <span className="stat-label">إجمالي المبيعات</span>
+                      <span className="stat-label">صافي المبيعات (بعد الخصم)</span>
                       <strong className="stat-number">{reportData.summary?.total_sales || 0} {settings.currency || 'ج.م'}</strong>
                       <small>{reportData.summary?.order_count || 0} فاتورة</small>
+                      {(reportData.summary?.total_discounts || 0) > 0 && (
+                        <small>قبل الخصم: {(reportData.summary?.total_sales || 0) + (reportData.summary?.total_discounts || 0)} | خصومات: {reportData.summary.total_discounts} {settings.currency || 'ج.م'}</small>
+                      )}
                     </div>
                   </div>
                   <div className="stat-card">
@@ -645,6 +648,14 @@ export default function ReportsTab({
                       <strong className="stat-number">
                         {((reportData.summary?.card_sales || 0) + (reportData.summary?.wallet_sales || 0))} {settings.currency || 'ج.م'}
                       </strong>
+                    </div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-icon">🧾</div>
+                    <div className="stat-data">
+                      <span className="stat-label">آجل متبقي (دفتر)</span>
+                      <strong className="stat-number">{reportData.summary?.notebook_remaining || 0} {settings.currency || 'ج.م'}</strong>
+                      <small>إجمالي الآجل: {reportData.summary?.notebook_sales || 0} {settings.currency || 'ج.م'}</small>
                     </div>
                   </div>
                   <div className="stat-card">

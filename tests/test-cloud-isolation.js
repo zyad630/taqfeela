@@ -1,122 +1,184 @@
 const assert = require('assert');
-const { buildCloudServer, db } = require('../apps/cloud/src/server');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { buildCloudServer, CloudDatabase } = require('../apps/cloud/src/server');
 
 async function runTests() {
   console.log('====================================================');
-  console.log('   TEST PHASE 3: CLOUD MULTI-TENANT ISOLATION       ');
+  console.log('   TEST PHASE 3: CLOUD SECURITY & ISOLATION SUITE   ');
   console.log('====================================================\n');
 
-  // Setup server
-  const { server } = buildCloudServer();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taqfeela-cloud-test-'));
+  const dbPath = path.join(tmpDir, 'cloud-store.json');
+  const testJwtSecret = 'test_super_secret_jwt_key_at_least_32_chars_long';
+
+  const db1 = new CloudDatabase(dbPath);
+  const { server } = buildCloudServer({
+    db: db1,
+    jwtSecret: testJwtSecret,
+    corsOrigins: ['https://admin.taqfeela.com']
+  });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const port = server.address().port;
   console.log(`[Test Setup] Cloud server running on port: ${port}`);
 
-  // Seed two distinct cafes: Cafe A and Cafe B
-  const cafeA = db.seedDefaultCafe('CAFE-A-CODE', 'كافيه الشرقية', 'token_secret_A');
-  const cafeB = db.createCafe('كافيه الغربية', 'CAFE-B-CODE', 'token_secret_B');
-  console.log(`[Test Setup] Seeded Cafe A (id: ${cafeA.cafeId}) and Cafe B (id: ${cafeB.id})`);
+  // Create two distinct cafes and two real bcrypt-authenticated admins
+  const cafeA = db1.createCafe('كافيه الشرقية', 'CAFE-A-CODE', 'token_secret_A_random_98765');
+  const cafeB = db1.createCafe('كافيه الغربية', 'CAFE-B-CODE', 'token_secret_B_random_54321');
+  const adminA = db1.createAdminUser('adminA@example.com', 'StrongPassA!2026');
+  const adminB = db1.createAdminUser('adminB@example.com', 'StrongPassB!2026');
+  db1.linkAdminToCafe(adminA.id, cafeA.id);
+  db1.linkAdminToCafe(adminB.id, cafeB.id);
 
-  // Admin A authorized ONLY for Cafe A
-  const adminIdA = 101;
-  db.linkAdminToCafe(adminIdA, cafeA.cafeId);
-
-  // Admin B authorized ONLY for Cafe B
-  const adminIdB = 202;
-  db.linkAdminToCafe(adminIdB, cafeB.id);
-
-  console.log('\n--- 1. Relay Push: Reject Wrong Relay Token ---');
-  const resBadAuth = await fetch(`http://127.0.0.1:${port}/relay/push`, {
+  console.log('\n--- 1. Auth: Reject Invalid Credentials & Forged Tokens ---');
+  const badLogin = await fetch(`http://127.0.0.1:${port}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      cafeCode: 'CAFE-A-CODE',
-      relayToken: 'WRONG_INVALID_TOKEN',
-      type: 'snapshot',
-      seq: 1,
-      data: { sales: '100' }
-    })
+    body: JSON.stringify({ email: 'adminA@example.com', password: 'wrong_password' })
   });
-  assert.strictEqual(resBadAuth.status, 401, 'Must reject invalid relay token with 401');
-  console.log('✓ Rejected invalid relay token with 401');
+  assert.strictEqual(badLogin.status, 401, 'Wrong password must return 401');
 
-  console.log('\n--- 2. Relay Push: Valid Authentication & Ingestion ---');
+  // Forged legacy admin_token_101 must be rejected
+  const forgedAccess = await fetch(`http://127.0.0.1:${port}/cafes/${cafeA.id}/home`, {
+    headers: { 'Authorization': 'Bearer admin_token_101' }
+  });
+  assert.strictEqual(forgedAccess.status, 401, 'Forged admin_token_101 must be rejected with 401');
+  console.log('✓ Rejected wrong password and forged admin_token_101 with 401');
+
+  console.log('\n--- 2. Auth: Real bcrypt Login & Signed JWT ---');
+  const loginA = await fetch(`http://127.0.0.1:${port}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'adminA@example.com', password: 'StrongPassA!2026' })
+  });
+  assert.strictEqual(loginA.status, 200);
+  const { token: tokenA } = await loginA.json();
+  assert.ok(tokenA && tokenA.split('.').length === 3, 'Must issue signed JWT');
+
+  const loginB = await fetch(`http://127.0.0.1:${port}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'adminB@example.com', password: 'StrongPassB!2026' })
+  });
+  assert.strictEqual(loginB.status, 200);
+  const { token: tokenB } = await loginB.json();
+  console.log('✓ Real bcrypt login issued signed JWTs');
+
+  console.log('\n--- 3. Relay Push: Reject Missing/Wrong Token & Non-Integer Seq ---');
+  const resMissingToken = await fetch(`http://127.0.0.1:${port}/relay/push`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cafeCode: 'CAFE-A-CODE', type: 'snapshot', seq: 1, data: { sales: '100' } })
+  });
+  assert.strictEqual(resMissingToken.status, 401, 'Missing relayToken must return 401 JSON (not 500 stack trace)');
+  const missingBody = await resMissingToken.json();
+  assert.ok(missingBody.error);
+
+  const resStringSeq = await fetch(`http://127.0.0.1:${port}/relay/push`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cafeCode: 'CAFE-A-CODE', relayToken: 'token_secret_A_random_98765', type: 'snapshot', seq: '5', data: { sales: '100' } })
+  });
+  assert.strictEqual(resStringSeq.status, 400, 'String seq must be rejected with 400');
+
+  const resMissingSeq = await fetch(`http://127.0.0.1:${port}/relay/push`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cafeCode: 'CAFE-A-CODE', relayToken: 'token_secret_A_random_98765', type: 'snapshot', data: { sales: '100' } })
+  });
+  assert.strictEqual(resMissingSeq.status, 400, 'Missing seq must be rejected with 400');
+  console.log('✓ Rejected missing relayToken (401), string seq (400), and missing seq (400)');
+
+  console.log('\n--- 4. Malformed JSON & Strict CORS ---');
+  const resBadJson = await fetch(`http://127.0.0.1:${port}/relay/push`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Origin': 'https://evil.example.com' },
+    body: '{bad json'
+  });
+  assert.strictEqual(resBadJson.status, 400, 'Malformed JSON must return 400');
+  const badJsonText = await resBadJson.text();
+  assert.ok(!badJsonText.includes('SyntaxError') && !badJsonText.includes('node_modules'), 'Must not leak stack trace');
+  assert.strictEqual(resBadJson.headers.get('access-control-allow-origin'), null, 'Disallowed origin must not receive ACAO header');
+  console.log('✓ Malformed JSON returns clean 400 without stack trace; CORS rejects unknown origins');
+
+  console.log('\n--- 5. Relay Push, Replay Protection & Persistence Across Restart ---');
   const resGoodAuth = await fetch(`http://127.0.0.1:${port}/relay/push`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       cafeCode: 'CAFE-A-CODE',
-      relayToken: 'token_secret_A',
+      relayToken: 'token_secret_A_random_98765',
       type: 'snapshot',
-      seq: 1,
-      data: {
-        sales: '5,400',
-        invoicesCount: '48'
-      }
+      seq: 10,
+      data: { sales: '5,400', invoicesCount: '48' }
     })
   });
   assert.strictEqual(resGoodAuth.status, 200);
-  const goodBody = await resGoodAuth.json();
-  assert.strictEqual(goodBody.ack, true);
-  console.log('✓ Ingested Cafe A snapshot successfully (seq 1)');
+  assert.strictEqual((await resGoodAuth.json()).ack, true);
 
-  console.log('\n--- 3. Replay Attack Prevention (Monotonic Seq Enforced) ---');
-  // Re-send seq 1 (replayed message with forged sales)
-  const resReplay = await fetch(`http://127.0.0.1:${port}/relay/push`, {
+  // Stop server and restart with a fresh CloudDatabase instance reading the same file!
+  await new Promise((resolve) => server.close(resolve));
+  const db2 = new CloudDatabase(dbPath);
+  const { server: server2 } = buildCloudServer({ db: db2, jwtSecret: testJwtSecret });
+  await new Promise((resolve) => server2.listen(0, '127.0.0.1', resolve));
+  const port2 = server2.address().port;
+
+  // Replay seq 10 AFTER restart -> must still be blocked!
+  const resReplayAfterRestart = await fetch(`http://127.0.0.1:${port2}/relay/push`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       cafeCode: 'CAFE-A-CODE',
-      relayToken: 'token_secret_A',
+      relayToken: 'token_secret_A_random_98765',
       type: 'snapshot',
-      seq: 1,
+      seq: 10,
       data: { sales: '999,999' }
     })
   });
-  const replayBody = await resReplay.json();
+  const replayBody = await resReplayAfterRestart.json();
   assert.strictEqual(replayBody.ack, false);
   assert.strictEqual(replayBody.reason, 'replayed_seq');
 
-  // Verify snapshot in DB was NOT overwritten with replayed sales
-  const snapA = db.getSnapshot(cafeA.cafeId);
-  assert.strictEqual(snapA.json.sales, '5,400', 'Replayed message must not overwrite state');
-  console.log('✓ Replayed sequence number silently rejected; snapshot preserved');
-
-  console.log('\n--- 4. Strict Multi-Tenant Isolation (Admin A vs Cafe B) ---');
-  // Admin A accesses Cafe A Home -> should succeed (200)
-  const resHomeA = await fetch(`http://127.0.0.1:${port}/cafes/${cafeA.cafeId}/home`, {
-    headers: { 'Authorization': `Bearer admin_token_${adminIdA}` }
+  // Verify persisted snapshot & strict multi-tenant isolation AFTER restart
+  const resHomeA = await fetch(`http://127.0.0.1:${port2}/cafes/${cafeA.id}/home`, {
+    headers: { 'Authorization': `Bearer ${tokenA}` }
   });
-  assert.strictEqual(resHomeA.status, 200, 'Admin A must access Cafe A');
-  const bodyHomeA = await resHomeA.json();
-  assert.strictEqual(bodyHomeA.sales, '5,400');
-  console.log('✓ Admin A accessed Cafe A home snapshot successfully');
+  assert.strictEqual(resHomeA.status, 200);
+  assert.strictEqual((await resHomeA.json()).sales, '5,400', 'Persisted snapshot must survive restart');
 
-  // Admin A attempts to access Cafe B Home -> MUST return 403 Forbidden!
-  const resHomeB = await fetch(`http://127.0.0.1:${port}/cafes/${cafeB.id}/home`, {
-    headers: { 'Authorization': `Bearer admin_token_${adminIdA}` }
+  const resHomeB = await fetch(`http://127.0.0.1:${port2}/cafes/${cafeB.id}/home`, {
+    headers: { 'Authorization': `Bearer ${tokenA}` }
   });
-  assert.strictEqual(resHomeB.status, 403, 'Cross-tenant access MUST return 403 Forbidden');
-  console.log('✓ Admin A blocked from Cafe B with 403 Forbidden (Zero Cross-Café Leakage)');
+  assert.strictEqual(resHomeB.status, 403, 'Cross-tenant access must return 403');
 
-  // Admin A attempts to access Cafe B Reports -> MUST return 403 Forbidden!
-  const resRepB = await fetch(`http://127.0.0.1:${port}/cafes/${cafeB.id}/reports`, {
-    headers: { 'Authorization': `Bearer admin_token_${adminIdA}` }
+  const resHomeBAdminB = await fetch(`http://127.0.0.1:${port2}/cafes/${cafeB.id}/home`, {
+    headers: { 'Authorization': `Bearer ${tokenB}` }
   });
-  assert.strictEqual(resRepB.status, 403, 'Cross-tenant reports access MUST return 403 Forbidden');
-  console.log('✓ Admin A blocked from Cafe B reports with 403 Forbidden');
+  assert.strictEqual(resHomeBAdminB.status, 200);
+  console.log('✓ Data, anti-replay seq, and multi-tenant isolation persisted across restart');
 
-  // Admin B accesses Cafe B Home -> should succeed (200)
-  const resHomeBAdminB = await fetch(`http://127.0.0.1:${port}/cafes/${cafeB.id}/home`, {
-    headers: { 'Authorization': `Bearer admin_token_${adminIdB}` }
-  });
-  assert.strictEqual(resHomeBAdminB.status, 200, 'Admin B must access Cafe B');
-  console.log('✓ Admin B accessed Cafe B successfully');
+  console.log('\n--- 6. Login Rate Limiting (429) ---');
+  let got429 = false;
+  for (let i = 0; i < 8; i++) {
+    const r = await fetch(`http://127.0.0.1:${port2}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'adminA@example.com', password: 'wrong' })
+    });
+    if (r.status === 429) {
+      got429 = true;
+      break;
+    }
+  }
+  assert.strictEqual(got429, true, '/auth/login must enforce rate limiting (429)');
+  console.log('✓ /auth/login rate limiting enforced (429)');
 
-  await new Promise((resolve) => server.close(resolve));
+  await new Promise((resolve) => server2.close(resolve));
+  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
 
   console.log('\n====================================================');
-  console.log('   ✅ ALL CLOUD MULTI-TENANT ISOLATION TESTS PASSED!');
+  console.log('   ✅ ALL CLOUD SECURITY & ISOLATION TESTS PASSED!  ');
   console.log('====================================================\n');
 }
 

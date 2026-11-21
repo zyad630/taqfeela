@@ -1,7 +1,7 @@
 {
   "name": "@taqfeela/cloud",
   "version": "1.0.0",
-  "description": "Taqfeela Cloud Relay, PostgreSQL Multi-Tenant Storage and Admin REST API",
+  "description": "Taqfeela Cloud Relay, Persistent Multi-Tenant Storage and Admin REST API",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

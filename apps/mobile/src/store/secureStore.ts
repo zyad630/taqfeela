@@ -44,6 +44,7 @@ export interface CafeInfo {
   code?: string;
   host: string;
   port: number;
+  protocol?: 'http' | 'https';
 }
 
 export interface ActiveWaiter {

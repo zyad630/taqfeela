@@ -140,16 +140,19 @@ function protectFiles() {
     }
   }
 
-  // Backup main.js and db.js (inject legal trap banner)
+  // Backup main.js and db.js (inject legal trap banner + strip CAFE_TEST_AUTOMATION backdoor for production builds)
   for (const file of ['main.js', 'db.js']) {
     const fullPath = path.join(ELECTRON_DIR, file);
     if (fs.existsSync(fullPath)) {
       backupFile(fullPath, path.join('electron', file));
-      const code = fs.readFileSync(fullPath, 'utf8');
+      let code = fs.readFileSync(fullPath, 'utf8');
+      // Issue 19: Compile-time strip of test automation bypass in production builds
+      code = code.replace(/process\.env\.CAFE_TEST_AUTOMATION\s*===\s*['"]1['"]/g, 'false /* TEST_AUTOMATION_STRIPPED_IN_PROD */');
       // Inject legal trap header at top of main.js and db.js
       if (!code.includes('STRICT PROPRIETARY & CRIMINAL LIABILITY NOTICE')) {
-        fs.writeFileSync(fullPath, LEGAL_BANNER + code, 'utf8');
+        code = LEGAL_BANNER + code;
       }
+      fs.writeFileSync(fullPath, code, 'utf8');
     }
   }
 

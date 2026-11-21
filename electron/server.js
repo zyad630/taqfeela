@@ -178444,8 +178444,8 @@ function escapeHtml(str) {
 }
 var crypto2 = require("crypto");
 function verifyTokenTimingSafe(expectedToken, providedToken) {
-  if (!expectedToken) return true;
-  if (!providedToken || typeof providedToken !== "string") return false;
+  if (!expectedToken || typeof expectedToken !== "string" || !expectedToken.trim()) return false;
+  if (!providedToken || typeof providedToken !== "string" || !providedToken.trim()) return false;
   const expBuf = Buffer.from(String(expectedToken));
   const provBuf = Buffer.from(String(providedToken));
   if (expBuf.length !== provBuf.length) return false;
@@ -178531,7 +178531,8 @@ function checkRateLimit(map, ip, maxRequests, windowMs) {
   return true;
 }
 var rateLimitMap = /* @__PURE__ */ new Map();
-setInterval(() => rateLimitMap.clear(), 60 * 1e3).unref();
+var tableRateLimitMap = /* @__PURE__ */ new Map();
+setInterval(() => { rateLimitMap.clear(); tableRateLimitMap.clear(); }, 60 * 1e3).unref();
 var recentOrderIds = /* @__PURE__ */ new Map();
 var stripTags = (s, n) => String(s || "").replace(/[<>]/g, "").slice(0, n);
 var flushImpl = null;
@@ -178633,20 +178634,11 @@ function startServer(options = {}) {
     } catch (_) {
     }
     return rawTables.map((tbl) => {
+      // Single source of truth: SQLite table_carts (no stale in-memory fallback)
       const dbCartData = dbCarts[tbl.id] || dbCarts[String(tbl.id)];
-      const memoryCart = activeTableCarts.get(tbl.id) || activeTableCarts.get(String(tbl.id)) || { items: [] };
-      if (tbl.status === "available" && (!dbCartData || !Array.isArray(dbCartData.cart) || dbCartData.cart.length === 0)) {
-        activeTableCarts.delete(tbl.id);
-        activeTableCarts.delete(String(tbl.id));
-      }
-      let items = [];
-      if (dbCartData && Array.isArray(dbCartData.cart) && dbCartData.cart.length > 0) {
-        items = dbCartData.cart;
-      } else if (tbl.status === "occupied" && Array.isArray(memoryCart.items) && memoryCart.items.length > 0) {
-        items = memoryCart.items;
-      } else {
-        items = [];
-      }
+      const items = (dbCartData && Array.isArray(dbCartData.cart) && dbCartData.cart.length > 0)
+        ? dbCartData.cart
+        : [];
       const activeItemsCount = items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
       const activeTotal = items.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.qty) || 0), 0);
       const isOccupied = tbl.status === "occupied" || activeItemsCount > 0;
@@ -178660,7 +178652,7 @@ function startServer(options = {}) {
         activeItemsCount,
         activeTotal,
         activeItems: items,
-        activeCart: { items, customerName: dbCartData?.customerName || memoryCart?.customerName || "" }
+        activeCart: { items, customerName: dbCartData?.customerName || "" }
       };
     });
   }
@@ -178767,17 +178759,21 @@ function startServer(options = {}) {
         return res.status(403).json({ success: false, error: "\u062E\u062F\u0645\u0629 \u0627\u0644\u0637\u0644\u0628 \u0639\u0628\u0631 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F \u0645\u0639\u0637\u0644\u0629 \u0644\u0647\u0630\u0647 \u0627\u0644\u0637\u0627\u0648\u0644\u0629 \u062D\u0627\u0644\u064A\u0627\u064B", qr_disabled: true });
       }
       const clientToken = String(req.query.token || "").trim();
-      if (tbl.qr_token) {
-        if (!clientToken || !verifyTokenTimingSafe(tbl.qr_token, clientToken)) {
-          return res.status(403).json({ success: false, error: "\u062A\u0645 \u062A\u062C\u062F\u064A\u062F \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u0637\u0627\u0648\u0644\u0629 \u0648\u062C\u0644\u0633\u062A\u0643 \u0627\u0644\u0633\u0627\u0628\u0642\u0629 \u0645\u0646\u062A\u0647\u064A\u0629. \u064A\u0631\u062C\u0649 \u0645\u0633\u062D \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u062C\u062F\u064A\u062F \u0645\u0646 \u0639\u0644\u0649 \u0627\u0644\u0637\u0627\u0648\u0644\u0629.", token_expired: true });
-        }
+      if (!tbl.qr_token || !clientToken || !verifyTokenTimingSafe(tbl.qr_token, clientToken)) {
+        return res.status(403).json({ success: false, error: "\u062A\u0645 \u062A\u062C\u062F\u064A\u062F \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u0637\u0627\u0648\u0644\u0629 \u0648\u062C\u0644\u0633\u062A\u0643 \u0627\u0644\u0633\u0627\u0628\u0642\u0629 \u0645\u0646\u062A\u0647\u064A\u0629. \u064A\u0631\u062C\u0649 \u0645\u0633\u062D \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u062C\u062F\u064A\u062F \u0645\u0646 \u0639\u0644\u0649 \u0627\u0644\u0637\u0627\u0648\u0644\u0629.", token_expired: true });
       }
       const clientDate = String(req.query.d || "").trim();
       const todayCairo = typeof db.getCairoTodayString === "function" ? db.getCairoTodayString() : (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
       const setts = db.getSettings ? db.getSettings() : {};
       const enforceDailyQr = setts.enforce_daily_qr === "1" || setts.enforce_daily_qr === true;
-      if (enforceDailyQr && clientDate && clientDate !== todayCairo) {
-        return res.status(403).json({ success: false, error: `\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0633\u0627\u0628\u0642 (${clientDate}). \u064A\u0631\u062C\u0649 \u0645\u0633\u062D \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u064A\u0648\u0645 \u0645\u0646 \u0639\u0644\u0649 \u0627\u0644\u0637\u0627\u0648\u0644\u0629.`, date_expired: true });
+      if (enforceDailyQr && (!clientDate || clientDate !== todayCairo)) {
+        return res.status(403).json({
+          success: false,
+          error: clientDate
+            ? `\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0633\u0627\u0628\u0642 (${clientDate}). \u064A\u0631\u062C\u0649 \u0645\u0633\u062D \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u064A\u0648\u0645 \u0645\u0646 \u0639\u0644\u0649 \u0627\u0644\u0637\u0627\u0648\u0644\u0629.`
+            : "\u0645\u0637\u0644\u0648\u0628 \u0645\u0633\u062D \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0645\u062D\u062F\u0651\u062B \u0645\u0646 \u0639\u0644\u0649 \u0627\u0644\u0637\u0627\u0648\u0644\u0629.",
+          date_expired: true
+        });
       }
       let items = [];
       let dbCarts = {};
@@ -179012,23 +179008,31 @@ function startServer(options = {}) {
             qr_disabled: true
           });
         }
+        // Per-table rate limit (max 30 orders/min per table) in addition to per-IP rate limit
+        const tblKey = String(tbl.id);
+        const tblTimes = (tableRateLimitMap.get(tblKey) || []).filter((t) => rateNow - t < 6e4);
+        tblTimes.push(rateNow);
+        tableRateLimitMap.set(tblKey, tblTimes);
+        if (tblTimes.length > 30) {
+          return res.status(429).json({ success: false, error: "\u0637\u0644\u0628\u0627\u062A \u0643\u062A\u064A\u0631 \u0639\u0644\u0649 \u0647\u0630\u0647 \u0627\u0644\u0637\u0627\u0648\u0644\u0629\u060C \u0627\u0633\u062A\u0646\u0649 \u0634\u0648\u064A\u0629" });
+        }
         const clientToken = String(req.body.token || req.query.token || "").trim();
-        if (tbl.qr_token) {
-          if (!clientToken || !verifyTokenTimingSafe(tbl.qr_token, clientToken)) {
-            return res.status(403).json({
-              success: false,
-              error: "\u062A\u0645 \u062A\u062C\u062F\u064A\u062F \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u0637\u0627\u0648\u0644\u0629 \u0648\u062C\u0644\u0633\u062A\u0643 \u0627\u0644\u0633\u0627\u0628\u0642\u0629 \u0645\u0646\u062A\u0647\u064A\u0629. \u064A\u0631\u062C\u0649 \u0645\u0633\u062D \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u062C\u062F\u064A\u062F \u0645\u0646 \u0639\u0644\u0649 \u0627\u0644\u0637\u0627\u0648\u0644\u0629.",
-              token_expired: true
-            });
-          }
+        if (!tbl.qr_token || !clientToken || !verifyTokenTimingSafe(tbl.qr_token, clientToken)) {
+          return res.status(403).json({
+            success: false,
+            error: "\u062A\u0645 \u062A\u062C\u062F\u064A\u062F \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u0637\u0627\u0648\u0644\u0629 \u0648\u062C\u0644\u0633\u062A\u0643 \u0627\u0644\u0633\u0627\u0628\u0642\u0629 \u0645\u0646\u062A\u0647\u064A\u0629. \u064A\u0631\u062C\u0649 \u0645\u0633\u062D \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u062C\u062F\u064A\u062F \u0645\u0646 \u0639\u0644\u0649 \u0627\u0644\u0637\u0627\u0648\u0644\u0629.",
+            token_expired: true
+          });
         }
         const clientDate = String(req.body.d || req.query.d || "").trim();
         const todayCairo = typeof db.getCairoTodayString === "function" ? db.getCairoTodayString() : (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
         const enforceDailyQr = setts.enforce_daily_qr === "1" || setts.enforce_daily_qr === true;
-        if (enforceDailyQr && clientDate && clientDate !== todayCairo) {
+        if (enforceDailyQr && (!clientDate || clientDate !== todayCairo)) {
           return res.status(403).json({
             success: false,
-            error: `\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0633\u0627\u0628\u0642 (${clientDate}). \u064A\u0631\u062C\u0649 \u0645\u0633\u062D \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u064A\u0648\u0645 \u0645\u0646 \u0639\u0644\u0649 \u0627\u0644\u0637\u0627\u0648\u0644\u0629.`,
+            error: clientDate
+              ? `\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0633\u0627\u0628\u0642 (${clientDate}). \u064A\u0631\u062C\u0649 \u0645\u0633\u062D \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u064A\u0648\u0645 \u0645\u0646 \u0639\u0644\u0649 \u0627\u0644\u0637\u0627\u0648\u0644\u0629.`
+              : "\u0645\u0637\u0644\u0648\u0628 \u0645\u0633\u062D \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0645\u062D\u062F\u0651\u062B \u0645\u0646 \u0639\u0644\u0649 \u0627\u0644\u0637\u0627\u0648\u0644\u0629.",
             date_expired: true
           });
         }
@@ -179500,8 +179504,7 @@ function startServer(options = {}) {
             `);
           }
           const clientToken = String(req.query.token || "").trim();
-          if (tbl.qr_token) {
-            if (!clientToken || !verifyTokenTimingSafe(tbl.qr_token, clientToken)) {
+          if (!tbl.qr_token || !clientToken || !verifyTokenTimingSafe(tbl.qr_token, clientToken)) {
               return res.status(403).send(`
               <!DOCTYPE html>
               <html lang="ar" dir="rtl">
@@ -179528,13 +179531,12 @@ function startServer(options = {}) {
               </body>
               </html>
             `);
-            }
           }
           const clientDate = String(req.query.d || "").trim();
           const todayCairo = typeof db.getCairoTodayString === "function" ? db.getCairoTodayString() : (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
           const setts = db.getSettings ? db.getSettings() : {};
           const enforceDailyQr = setts.enforce_daily_qr === "1" || setts.enforce_daily_qr === true;
-          if (enforceDailyQr && clientDate && clientDate !== todayCairo) {
+          if (enforceDailyQr && (!clientDate || clientDate !== todayCairo)) {
             return res.status(403).send(`
               <!DOCTYPE html>
               <html lang="ar" dir="rtl">

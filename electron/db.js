@@ -97,6 +97,193 @@ let lastKnownDbMtime = 0;
 let lastKnownDbSize = 0;
 let lastExternalConflict = null;
 let atomicSaveCount = 0;
+let dbOfflineTamperInfo = null;
+
+function getDbSealPath() {
+  if (!dbPath) return null;
+  return path.join(path.dirname(dbPath), '.db_seal');
+}
+
+function getDeviceIntegrityKey(purpose = 'general') {
+  const machineId = typeof getMachineId === 'function' ? getMachineId() : 'UNKNOWN-MACHINE';
+  let licMaterial = '';
+  try {
+    const baseDir = typeof getBaseDir === 'function' ? getBaseDir() : (dbPath ? path.dirname(dbPath) : null);
+    if (baseDir) {
+      const licFile = path.join(baseDir, '.license');
+      if (fs.existsSync(licFile)) {
+        licMaterial = fs.readFileSync(licFile, 'utf8').trim();
+      }
+    }
+    if (!licMaterial && db) {
+      const res = db.exec("SELECT value FROM settings WHERE key = 'license_key' LIMIT 1");
+      if (res && res[0] && res[0].values && res[0].values[0]) {
+        licMaterial = String(res[0].values[0][0] || '').trim();
+      }
+    }
+  } catch (_) {}
+  const pubFingerprint = crypto.createHash('sha256').update(String(PUBLIC_KEY_PEM || '')).digest('hex').slice(0, 16);
+  return crypto
+    .createHmac('sha256', `${machineId}|${pubFingerprint}|${purpose}`)
+    .update(licMaterial || 'UNLICENSED_DEVICE_BINDING')
+    .digest('hex');
+}
+
+function computeDbIntegritySeal(targetDb = db) {
+  if (!targetDb) return null;
+  const key = getDeviceIntegrityKey('db-table-seal-v1');
+  const h = crypto.createHmac('sha256', key);
+  const queries = [
+    ['users', 'SELECT id, COALESCE(username,""), COALESCE(password,""), COALESCE(pin,""), COALESCE(role,"") FROM users ORDER BY id ASC'],
+    ['orders', 'SELECT id, COALESCE(total,0), COALESCE(discount,0), COALESCE(payment_method,""), COALESCE(status,""), COALESCE(shift_id,0), COALESCE(created_at,"") FROM orders ORDER BY id ASC'],
+    ['customer_debts', 'SELECT id, COALESCE(customer_name,""), COALESCE(amount,0), COALESCE(paid_amount,0), COALESCE(status,""), COALESCE(order_id,0) FROM customer_debts ORDER BY id ASC'],
+    ['settings_sec', "SELECT key, COALESCE(value,'') FROM settings WHERE key IN ('last_system_time','tamper_locked','license_key','pin_lockout_state','waiter_server_token','enforce_daily_qr') ORDER BY key ASC"]
+  ];
+  for (const [label, sql] of queries) {
+    h.update(`|TABLE:${label}|`);
+    try {
+      const res = targetDb.exec(sql);
+      if (res && res[0] && res[0].values) {
+        for (const row of res[0].values) {
+          h.update(JSON.stringify(row));
+          h.update('\n');
+        }
+      }
+    } catch (_) {
+      // Table may not exist yet in very old legacy DB before migration
+      h.update('MISSING');
+    }
+  }
+  return h.digest('hex');
+}
+
+function updateDbIntegritySeal() {
+  if (!db || !dbPath) return;
+  // Never overwrite seal if offline tampering was already detected!
+  if (dbOfflineTamperInfo && dbOfflineTamperInfo.tampered) return;
+  try {
+    const seal = computeDbIntegritySeal(db);
+    if (!seal) return;
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('_db_integrity_seal_v1', ?)", [seal]);
+    let lastSystemTime = '';
+    try {
+      const r = db.exec("SELECT value FROM settings WHERE key = 'last_system_time' LIMIT 1");
+      if (r && r[0] && r[0].values && r[0].values[0]) {
+        lastSystemTime = String(r[0].values[0][0] || '');
+      }
+    } catch (_) {}
+    const sealPath = getDbSealPath();
+    if (sealPath) {
+      const payload = JSON.stringify({
+        v: 1,
+        seal,
+        lastSystemTime,
+        updatedAt: new Date().toISOString()
+      });
+      fs.writeFileSync(sealPath, payload, 'utf8');
+    }
+  } catch (err) {
+    console.warn('[DB Integrity] Seal update warning:', err?.message || err);
+  }
+}
+
+function verifyDbIntegrityOnStartup(loadedDb) {
+  dbOfflineTamperInfo = null;
+  if (!loadedDb) return { valid: true };
+  try {
+    let storedSeal = null;
+    let dbLastSystemTime = '';
+    try {
+      const r1 = loadedDb.exec("SELECT value FROM settings WHERE key = '_db_integrity_seal_v1' LIMIT 1");
+      if (r1 && r1[0] && r1[0].values && r1[0].values[0]) {
+        storedSeal = String(r1[0].values[0][0] || '').trim();
+      }
+      const r2 = loadedDb.exec("SELECT value FROM settings WHERE key = 'last_system_time' LIMIT 1");
+      if (r2 && r2[0] && r2[0].values && r2[0].values[0]) {
+        dbLastSystemTime = String(r2[0].values[0][0] || '').trim();
+      }
+    } catch (_) {}
+
+    let sidecar = null;
+    const sealPath = getDbSealPath();
+    if (sealPath && fs.existsSync(sealPath)) {
+      try {
+        sidecar = JSON.parse(fs.readFileSync(sealPath, 'utf8'));
+      } catch (_) {
+        sidecar = { corrupted: true };
+      }
+    }
+
+    // Legacy unsealed DB (upgrade from v1.0.1 where neither DB seal nor sidecar exists yet)
+    if (!storedSeal && !sidecar) {
+      return { valid: true, legacyUnsealed: true };
+    }
+
+    if (sidecar && sidecar.corrupted) {
+      dbOfflineTamperInfo = {
+        tampered: true,
+        reason: 'SEAL_SIDECAR_CORRUPTED',
+        detectedAt: new Date().toISOString()
+      };
+      console.error('[SECURITY CRITICAL] Offline DB tamper detected: .db_seal sidecar corrupted!');
+      return { valid: false, reason: 'SEAL_SIDECAR_CORRUPTED' };
+    }
+
+    // Check if DB seal was stripped while sidecar exists
+    if (!storedSeal && sidecar && sidecar.seal) {
+      dbOfflineTamperInfo = {
+        tampered: true,
+        reason: 'DB_SEAL_REMOVED',
+        detectedAt: new Date().toISOString()
+      };
+      console.error('[SECURITY CRITICAL] Offline DB tamper detected: _db_integrity_seal_v1 stripped from database!');
+      return { valid: false, reason: 'DB_SEAL_REMOVED' };
+    }
+
+    // Check if sidecar seal disagrees with DB seal (e.g. old DB file swapped in)
+    if (sidecar && sidecar.seal && storedSeal && sidecar.seal !== storedSeal) {
+      dbOfflineTamperInfo = {
+        tampered: true,
+        reason: 'DB_SEAL_SIDECAR_MISMATCH',
+        detectedAt: new Date().toISOString()
+      };
+      console.error('[SECURITY CRITICAL] Offline DB tamper detected: database seal does not match .db_seal sidecar!');
+      return { valid: false, reason: 'DB_SEAL_SIDECAR_MISMATCH' };
+    }
+
+    // Check if last_system_time was deleted or rolled back in DB compared to sidecar
+    if (sidecar && sidecar.lastSystemTime && (!dbLastSystemTime || dbLastSystemTime < sidecar.lastSystemTime)) {
+      dbOfflineTamperInfo = {
+        tampered: true,
+        reason: 'CLOCK_GUARD_TAMPERED_OFFLINE',
+        detectedAt: new Date().toISOString()
+      };
+      console.error('[SECURITY CRITICAL] Offline DB tamper detected: last_system_time deleted or rolled back!');
+      return { valid: false, reason: 'CLOCK_GUARD_TAMPERED_OFFLINE' };
+    }
+
+    // Verify computed HMAC of sensitive tables against stored seal
+    const computedSeal = computeDbIntegritySeal(loadedDb);
+    if (!computedSeal || !storedSeal || computedSeal !== storedSeal) {
+      dbOfflineTamperInfo = {
+        tampered: true,
+        reason: 'TABLE_INTEGRITY_HMAC_MISMATCH',
+        detectedAt: new Date().toISOString()
+      };
+      console.error('[SECURITY CRITICAL] Offline DB tamper detected: sensitive tables modified outside Taqfeela POS!');
+      return { valid: false, reason: 'TABLE_INTEGRITY_HMAC_MISMATCH' };
+    }
+
+    return { valid: true };
+  } catch (err) {
+    console.warn('[DB Integrity] Startup verification error:', err?.message || err);
+    return { valid: true };
+  }
+}
+
+function getDbOfflineTamperInfo() {
+  return dbOfflineTamperInfo;
+}
 
 function getAtomicSaveCount() {
   return atomicSaveCount;
@@ -143,6 +330,7 @@ function saveDbAtomic() {
     }
   }
 
+  updateDbIntegritySeal();
   const data = safeDbExport();
   const buffer = Buffer.from(data);
   const tmpPath = `${dbPath}.tmp-${Date.now()}`;
@@ -306,7 +494,8 @@ async function executeSingleWorkerSave() {
     }
 
     const tExportStart = performance.now();
-    const data = safeDbExport();
+    updateDbIntegritySeal();
+  const data = safeDbExport();
     const exportTimeMs = performance.now() - tExportStart;
 
     const reqId = nextWorkerRequestId++;
@@ -1072,6 +1261,7 @@ function exportMigrationPackage(targetPath) {
   if (integrity !== 'ok') {
     throw new Error('فحص سلامة قاعدة البيانات غير سليم: ' + integrity);
   }
+  updateDbIntegritySeal();
   const data = safeDbExport();
   fs.writeFileSync(targetPath, Buffer.from(data));
   const hash = crypto.createHash('sha256').update(data).digest('hex');
@@ -1239,6 +1429,7 @@ async function init(overridePath = null) {
   }
 
   recoveryInfo = { recovered: false, source: null, quarantinedPath: null };
+  dbOfflineTamperInfo = null;
 
   if (fs.existsSync(dbPath)) {
     try {
@@ -1247,6 +1438,7 @@ async function init(overridePath = null) {
         throw new Error('ملف قاعدة البيانات فارغ 0 بايت');
       }
       db = tryOpenAndValidate(fileBuffer);
+      verifyDbIntegrityOnStartup(db);
       try {
         const initStat = fs.statSync(dbPath);
         lastKnownDbMtime = initStat.mtimeMs;
@@ -2729,8 +2921,8 @@ function listTables() {
 
 function saveTable(tbl) {
   const qrEnabled = tbl.qr_enabled !== undefined && tbl.qr_enabled !== null ? (tbl.qr_enabled ? 1 : 0) : 1;
-  let qrToken = tbl.qr_token;
-  if (!qrToken && !tbl.id) {
+  let qrToken = tbl.qr_token !== undefined && tbl.qr_token !== null ? String(tbl.qr_token).trim() : '';
+  if (!qrToken && (!tbl.id || qrEnabled === 1)) {
     qrToken = generateQrToken();
   }
   if (tbl.id) {
@@ -2740,7 +2932,10 @@ function saveTable(tbl) {
     const cap = tbl.capacity !== undefined ? tbl.capacity : (existing?.capacity || 4);
     const hall = tbl.hall !== undefined ? tbl.hall : (existing?.hall || 'أرضي');
     const enabled = tbl.qr_enabled !== undefined ? qrEnabled : (existing?.qr_enabled !== undefined ? existing.qr_enabled : 1);
-    const tok = tbl.qr_token !== undefined ? tbl.qr_token : (existing?.qr_token || generateQrToken());
+    let tok = tbl.qr_token !== undefined ? String(tbl.qr_token || '').trim() : String(existing?.qr_token || '').trim();
+    if (!tok) {
+      tok = generateQrToken();
+    }
     runSql('UPDATE tables SET number = ?, name = ?, capacity = ?, hall = ?, qr_enabled = ?, qr_token = ? WHERE id = ?', [
       num,
       name,
@@ -2753,7 +2948,7 @@ function saveTable(tbl) {
     return queryGet('SELECT * FROM tables WHERE id = ?', [tbl.id]);
   } else {
     const res = runSql('INSERT INTO tables (number, name, capacity, status, hall, qr_enabled, qr_token) VALUES (?, ?, ?, ?, ?, ?, ?)', [
-      tbl.number, tbl.name, tbl.capacity || 4, 'available', tbl.hall || 'أرضي', qrEnabled, qrToken
+      tbl.number, tbl.name, tbl.capacity || 4, 'available', tbl.hall || 'أرضي', qrEnabled, qrToken || generateQrToken()
     ]);
     return queryGet('SELECT * FROM tables WHERE id = ?', [res.lastInsertRowid]);
   }
@@ -3959,6 +4154,12 @@ function recordSuccessfulLogin(key) {
 }
 
 function loginUser(username, password, clientIp = 'local') {
+  if (dbOfflineTamperInfo && dbOfflineTamperInfo.tampered) {
+    return {
+      error: '⚠️ تم رصد تعديل خارجي غير مصرح به في ملف قاعدة البيانات! تم إيقاف تسجيل الدخول لحماية البيانات. يرجى استعادة نسخة احتياطية سليمة أو التواصل مع الدعم الفني.',
+      dbTampered: true
+    };
+  }
   const clockCheck = checkClockIntegrity();
   if (!clockCheck.valid) {
     return { error: clockCheck.error, clockTampered: true };
@@ -3972,13 +4173,8 @@ function loginUser(username, password, clientIp = 'local') {
   }
 
   const cleanPass = String(password || '').trim();
-  let user = queryGet('SELECT id, username, name, password, role, phone, COALESCE(salary, 3500) AS salary, shift_name, shift_start, shift_end, COALESCE(must_change_password, 0) AS must_change_password FROM users WHERE lower(username) = ?', [cleanUser]);
-  if (!user && (cleanUser === 'admin' || cleanUser === 'manager')) {
-    user = queryGet('SELECT id, username, name, password, role, phone, COALESCE(salary, 3500) AS salary, shift_name, shift_start, shift_end, COALESCE(must_change_password, 0) AS must_change_password FROM users WHERE role = "admin" LIMIT 1');
-  }
-  if (!user && (cleanUser === 'cashier' || cleanUser === 'كاشير')) {
-    user = queryGet('SELECT id, username, name, password, role, phone, COALESCE(salary, 3500) AS salary, shift_name, shift_start, shift_end, COALESCE(must_change_password, 0) AS must_change_password FROM users WHERE role = "cashier" LIMIT 1');
-  }
+  // Strict exact username match — no implicit admin/cashier aliases
+  const user = queryGet('SELECT id, username, name, password, role, phone, COALESCE(salary, 3500) AS salary, shift_name, shift_start, shift_end, COALESCE(must_change_password, 0) AS must_change_password FROM users WHERE lower(username) = ?', [cleanUser]);
   if (!user || !user.password) {
     recordFailedLogin(lockKey);
     return null;
@@ -4666,6 +4862,13 @@ function deleteDebt({ debtId, adminPassword, actor = null }) {
 }
 
 function verifyAdminPassword(adminPassword) {
+  if (dbOfflineTamperInfo && dbOfflineTamperInfo.tampered) {
+    return {
+      success: false,
+      dbTampered: true,
+      error: '⚠️ تم رصد تعديل خارجي غير مصرح به في ملف قاعدة البيانات! يرجى استعادة نسخة احتياطية سليمة أو التواصل مع الدعم الفني.'
+    };
+  }
   if (!adminPassword || typeof adminPassword !== 'string' || !adminPassword.trim()) {
     return { success: false, error: 'يرجى إدخال كلمة مرور الأدمن' };
   }
@@ -5953,17 +6156,24 @@ function getReportSales({ dateFrom, dateTo, shiftId = null, userId = null } = {}
   const conditions = ["status != 'cancelled'"];
   const oConditions = ["o.status != 'cancelled'"];
   const params = [];
-  if (dateFrom) { 
+  const reportTzMode = getReportTimezoneMode();
+  if (dateFrom) {
     const dFrom = String(dateFrom).slice(0, 10);
-    conditions.push("date(created_at, 'localtime') >= date(?)"); 
-    oConditions.push("date(o.created_at, 'localtime') >= date(?)");
-    params.push(dFrom); 
+    const startMs = reportDayStartMs(dFrom, reportTzMode);
+    if (startMs !== null) {
+      conditions.push("created_at >= ?");
+      oConditions.push("o.created_at >= ?");
+      params.push(new Date(startMs).toISOString());
+    }
   }
-  if (dateTo) { 
+  if (dateTo) {
     const dTo = String(dateTo).slice(0, 10);
-    conditions.push("date(created_at, 'localtime') <= date(?)"); 
-    oConditions.push("date(o.created_at, 'localtime') <= date(?)");
-    params.push(dTo); 
+    const endMs = reportDayNextStartMs(dTo, reportTzMode);
+    if (endMs !== null) {
+      conditions.push("created_at < ?");
+      oConditions.push("o.created_at < ?");
+      params.push(new Date(endMs).toISOString());
+    }
   }
   if (shiftId && shiftId !== 'all' && String(shiftId).trim() !== '') { 
     conditions.push("shift_id = ?"); 
@@ -5972,8 +6182,8 @@ function getReportSales({ dateFrom, dateTo, shiftId = null, userId = null } = {}
   }
   if (userId && userId !== 'all' && String(userId).trim() !== '') {
     const numUid = Number(userId);
-    conditions.push("(user_id = ? OR shift_id IN (SELECT id FROM shifts WHERE user_id = ?))");
-    oConditions.push("(o.user_id = ? OR o.shift_id IN (SELECT id FROM shifts WHERE user_id = ?))");
+    conditions.push("(user_id = ? OR (user_id IS NULL AND shift_id IN (SELECT id FROM shifts WHERE user_id = ?)))");
+    oConditions.push("(o.user_id = ? OR (o.user_id IS NULL AND o.shift_id IN (SELECT id FROM shifts WHERE user_id = ?)))");
     params.push(numUid, numUid);
   }
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
@@ -6004,6 +6214,7 @@ function getReportSales({ dateFrom, dateTo, shiftId = null, userId = null } = {}
         ELSE 0 
       END), 0) AS wallet_sales,
       COALESCE(SUM(CASE WHEN (order_type = 'notebook' OR payment_method = 'notebook') THEN total ELSE 0 END), 0) AS notebook_sales,
+      COALESCE(SUM(CASE WHEN (order_type = 'notebook' OR payment_method = 'notebook') THEN total - COALESCE(cash_amount, 0) ELSE 0 END), 0) AS notebook_remaining,
       COALESCE(SUM(CASE WHEN order_type = 'dine_in' THEN total ELSE 0 END), 0) AS dine_in_sales,
       COALESCE(SUM(CASE WHEN order_type = 'takeaway' THEN total ELSE 0 END), 0) AS takeaway_sales
     FROM orders ${where}
@@ -6021,13 +6232,32 @@ function getReportSales({ dateFrom, dateTo, shiftId = null, userId = null } = {}
     LIMIT 20
   `, params);
 
-  const dailyBreakdown = queryAll(`
-    SELECT date(created_at, 'localtime') AS day,
-      COUNT(*) AS order_count,
-      COALESCE(SUM(total), 0) AS total
-    FROM orders ${where}
-    GROUP BY day ORDER BY day ASC
+  // القائمة الكاملة للأصناف المباعة بدون حد أقصى - تُستخدم في التصدير حتى لا تسقط أصناف من التقرير
+  const allProducts = queryAll(`
+    SELECT oi.product_name, oi.product_id,
+      SUM(oi.qty) AS total_qty,
+      SUM(oi.total_price) AS total_sales
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    ${oWhere}
+    GROUP BY oi.product_id
+    ORDER BY total_qty DESC
   `, params);
+
+  const dailyRows = queryAll(`
+    SELECT created_at, COALESCE(total, 0) AS total
+    FROM orders ${where}
+  `, params);
+  const dailyMap = new Map();
+  for (const r of dailyRows) {
+    const day = toCairoDateString(r.created_at) || String(r.created_at || '').slice(0, 10);
+    if (!day) continue;
+    const cur = dailyMap.get(day) || { day, order_count: 0, total: 0 };
+    cur.order_count += 1;
+    cur.total += r.total;
+    dailyMap.set(day, cur);
+  }
+  const dailyBreakdown = Array.from(dailyMap.values()).sort((a, b) => (a.day < b.day ? -1 : 1));
 
   const bySection = queryAll(`
     SELECT COALESCE(NULLIF(o.table_hall, ''), t.hall, 'صالة') AS section_name,
@@ -6037,7 +6267,7 @@ function getReportSales({ dateFrom, dateTo, shiftId = null, userId = null } = {}
     FROM orders o
     LEFT JOIN tables t ON o.table_id = t.id
     ${oWhere.length ? oWhere + " AND o.order_type = 'dine_in'" : "WHERE o.order_type = 'dine_in'"}
-    GROUP BY COALESCE(NULLIF(o.table_name, ''), t.name, o.table_id) ORDER BY total DESC
+    GROUP BY COALESCE(NULLIF(o.table_hall, ''), t.hall, 'صالة'), COALESCE(o.table_id, 'nm:' || COALESCE(NULLIF(o.table_name, ''), t.name, '')) ORDER BY total DESC
   `, params);
 
   const userBreakdown = queryAll(`
@@ -6088,7 +6318,7 @@ function getReportSales({ dateFrom, dateTo, shiftId = null, userId = null } = {}
     LIMIT 2000
   `, params);
 
-  return { summary, topProducts, dailyBreakdown, bySection, userBreakdown, ordersList };
+  return { summary, topProducts, allProducts, dailyBreakdown, bySection, userBreakdown, ordersList };
 }
 
 
@@ -6409,6 +6639,57 @@ function isEgyptDST(date = new Date(), options = null) {
 
 // تحويل أي وقت مخزّن (UTC) إلى تاريخ اليوم الفعلي بصيغة YYYY-MM-DD
 // يدعم التوقيت العالمي التلقائي حسب جهاز العميل (timezone_mode = 'auto')، أو توقيت القاهرة الدقيق، أو أي منطقة زمنية IANA
+// وضع المنطقة الزمنية المختار من الإعدادات (auto يعني توقيت الجهاز)
+function getReportTimezoneMode() {
+  try {
+    if (db) {
+      const row = queryGet("SELECT value FROM settings WHERE key = 'timezone_mode'");
+      if (row && row.value) return String(row.value).trim();
+    }
+  } catch (_) {}
+  return 'auto';
+}
+
+// فرق التوقيت بالمللي ثانية للمنطقة المختارة عند لحظة معينة (موجب شرق UTC)
+function tzOffsetMsAt(d, tzMode) {
+  const t = d.getTime();
+  if (tzMode === 'Africa/Cairo') {
+    return (isEgyptDST(d) ? 3 : 2) * 3600000;
+  }
+  if (tzMode && tzMode !== 'auto' && tzMode !== 'local') {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: tzMode, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+      }).formatToParts(d);
+      const get = (type) => Number(parts.find(p => p.type === type)?.value);
+      const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second'));
+      return asUtc - Math.floor(t / 1000) * 1000;
+    } catch (_) {}
+  }
+  return -d.getTimezoneOffset() * 60000;
+}
+
+// بداية يوم العمل (00:00 بالتوقيت المختار) محولة إلى UTC، مع تكرار بسيط لضبط الانتقال الصيفي
+function reportDayStartMs(dateStr, tzMode) {
+  const [y, m, dd] = String(dateStr).slice(0, 10).split('-').map(Number);
+  if (!y || !m || !dd) return null;
+  const guess = Date.UTC(y, m - 1, dd, 0, 0, 0);
+  let start = guess - tzOffsetMsAt(new Date(guess), tzMode);
+  start = guess - tzOffsetMsAt(new Date(start), tzMode);
+  return start;
+}
+
+// بداية اليوم التالي (نهاية اليوم المطلوب) كحد حصري بصيغة UTC
+function reportDayNextStartMs(dateStr, tzMode) {
+  const [y, m, dd] = String(dateStr).slice(0, 10).split('-').map(Number);
+  if (!y || !m || !dd) return null;
+  const guess = Date.UTC(y, m - 1, dd + 1, 0, 0, 0);
+  let start = guess - tzOffsetMsAt(new Date(guess), tzMode);
+  start = guess - tzOffsetMsAt(new Date(start), tzMode);
+  return start;
+}
+
 function toCairoDateString(isoString) {
   if (!isoString) return null;
   const d = new Date(isoString);
@@ -6781,7 +7062,8 @@ function saveSettings(settingsObj) {
       'vendor_password',
       'tamper_key',
       'cloud_sync_secret',
-      'admin_password'
+      'admin_password',
+      '_db_integrity_seal_v1'
     ]);
     // Vendor-locked commercial feature flags — ONLY writable via saveVendorFeatures() with Ed25519 signature
     const VENDOR_LOCKED_KEYS = new Set([
@@ -6821,13 +7103,13 @@ function isVendorFeatureEnabled(featureKey) {
   }
 }
 
-// --- Persistent PIN Lockout with HMAC Security (Survives Restarts & File Tampering) ---
+// --- Persistent PIN Lockout with Device/License-Derived HMAC Security (No Hardcoded Secret) ---
 const PIN_LOCKOUT_KEY = 'pin_lockout_state';
-const PIN_LOCKOUT_HMAC_SECRET = 'taqfeela_secure_pin_lockout_secret_v102_2026';
 
 function computePinLockoutHmac(count, windowStart, lockedUntil) {
   const payload = `${count}:${windowStart}:${lockedUntil}`;
-  return crypto.createHmac('sha256', PIN_LOCKOUT_HMAC_SECRET).update(payload).digest('hex');
+  const hmacKey = getDeviceIntegrityKey('pin-lockout-v2');
+  return crypto.createHmac('sha256', hmacKey).update(payload).digest('hex');
 }
 
 function verifyAuditLogChain(targetDb = null) {
@@ -6841,7 +7123,7 @@ function verifyAuditLogChain(targetDb = null) {
     const rows = res[0].values;
     let prevHash = 'GENESIS_AUDIT_BLOCK';
     let prevId = 0;
-    const hmacKey = PIN_LOCKOUT_HMAC_SECRET || 'taqfeela-audit-chain-key';
+    const hmacKey = getDeviceIntegrityKey('audit-log-chain-v2');
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       const id = r[0];
@@ -7050,7 +7332,8 @@ function autoBackupShift(shiftId) {
     const filename = `cafe-pos-shift-${shiftId}-${timestamp}.db`;
     const backupPath = path.join(backupDir, filename);
 
-    const data = safeDbExport();
+    updateDbIntegritySeal();
+  const data = safeDbExport();
     fs.writeFileSync(backupPath, Buffer.from(data));
   } catch (err) {
     console.error('Auto shift backup failed:', err);
@@ -7065,7 +7348,8 @@ function autoBackupDaily() {
     const backupPath = path.join(backupDir, filename);
 
     if (!fs.existsSync(backupPath)) {
-      const data = safeDbExport();
+      updateDbIntegritySeal();
+  const data = safeDbExport();
       fs.writeFileSync(backupPath, Buffer.from(data));
     }
   } catch (err) {
@@ -7080,7 +7364,8 @@ function autoBackupPeriodic() {
     const backupDir = getBackupDir();
     const slot = Math.floor(Date.now() / (10 * 60 * 1000)) % 2 === 0 ? 'A' : 'B';
     const backupPath = path.join(backupDir, `cafe-pos-periodic-${slot}.db`);
-    const data = safeDbExport();
+    updateDbIntegritySeal();
+  const data = safeDbExport();
     fs.writeFileSync(backupPath, Buffer.from(data));
   } catch (err) {
     console.error('Periodic backup failed:', err);
@@ -7221,6 +7506,7 @@ function createBackup(customDestPath = null) {
   const filename = `cafe-pos-backup-${timestamp}.db`;
   const backupPath = customDestPath || path.join(backupDir, filename);
 
+  updateDbIntegritySeal();
   const data = safeDbExport();
   fs.writeFileSync(backupPath, Buffer.from(data));
 
@@ -7699,12 +7985,16 @@ function getLicenseStatus() {
   // حارس الساعة مفعل ومطبق بشكل مستقل في تسجيل الدخول وفتح الوردية لمنع تسجيل العمليات بتوقيت متراجع
   const isClockTampered = !clockCheck.valid;
 
+  const isDbTampered = Boolean(dbOfflineTamperInfo && dbOfflineTamperInfo.tampered);
+
   if (lockedInDb || lockedInFs) {
     return {
       machineId,
       isActivated: false,
       isExpired: false,
       isTamperLocked: true,
+      isDbTampered,
+      dbTamperInfo: dbOfflineTamperInfo,
       tamperInfo: security.getTamperInfo(),
       error: '⚠️ تم قفل البرنامج نهائياً بسبب رصد محاولة غير مصرح بها لتعديل الملفات أو فحص الشفرة بالذكاء الاصطناعي. يرجى التواصل مع الدعم الفني.',
       licenseKey: null
@@ -7739,6 +8029,8 @@ function getLicenseStatus() {
     isActivated,
     isExpired: result.valid && result.expired,
     isTamperLocked: false,
+    isDbTampered,
+    dbTamperInfo: dbOfflineTamperInfo,
     isClockTampered,
     clockError: isClockTampered ? clockCheck.error : null,
     expiresAt: result.expiresAt || null,
@@ -7770,9 +8062,17 @@ function activateLicense(licenseKey) {
   const baseDir = getBaseDir();
   const licFile = path.join(baseDir, '.license');
 
+  // Capture existing PIN lockout before switching derived HMAC key to license-bound key
+  const existingPinState = getPinLockoutState();
   try { fs.writeFileSync(licFile, cleanKey, 'utf8'); } catch (_) {}
 
   runSql('INSERT OR REPLACE INTO settings (key, value) VALUES ("license_key", ?)', [cleanKey]);
+  // Re-seal PIN lockout and DB integrity seal with the newly activated license-derived key
+  try {
+    savePinLockoutState(existingPinState);
+    updateDbIntegritySeal();
+    saveDbAtomic();
+  } catch (_) {}
 
   const todayStr = typeof getCairoTodayString === 'function' ? getCairoTodayString() : new Date().toISOString().slice(0, 10);
   const daysLeft = result.expiresAt
@@ -7797,10 +8097,12 @@ function unlockTamper(unlockKey) {
   }
 
   try {
+    dbOfflineTamperInfo = null;
     if (db) {
       runSql('DELETE FROM settings WHERE key = "tamper_locked"');
       runSql('DELETE FROM settings WHERE key = "tamper_reason"');
       runSql('DELETE FROM settings WHERE key = "tamper_date"');
+      updateDbIntegritySeal();
       saveDbAtomic();
     }
   } catch (_) {}
@@ -8000,5 +8302,6 @@ module.exports = {
   registerMigration,
   runPendingMigrations,
   verifyAuditLogChain,
+  getDbOfflineTamperInfo,
   MIGRATIONS
 };

@@ -529,21 +529,53 @@ app.whenReady().then(async () => {
     revealMainWindow();
   }, SPLASH_DURATION_MS + 1000);
 
-  // Safe isolated startup for QR Ordering Server
+  // Safe isolated startup for QR Ordering Server & mDNS — STRICTLY gated on active license (Issue 19)
   // D2: qrServer خارج try لإتاحة flushPendingQrOrders في did-finish-load
   let qrServer = null;
-  try {
-    qrServer = require('./server');
-    qrServer.startServer({ db, get mainWindow() { return mainWindow; }, getMainWindow: () => mainWindow, port: 3000 });
-
+  function startLicensedNetworkServices() {
     try {
-      const mdns = require('./mdns');
-      const settings = db.getSettings ? db.getSettings() : {};
-      mdns.startDiscoveryBeacon({ port: 3000, cafeName: settings.cafe_name || 'تقفيلة كافيه', version: '1.0.2' });
-    } catch (_) { }
-  } catch (qrErr) {
-    console.warn('[QR Server] Startup error caught safely:', qrErr.message);
+      const licStatus = db.getLicenseStatus ? db.getLicenseStatus() : { isActivated: false };
+      if (!licStatus || licStatus.isActivated !== true) {
+        console.log('[QR Server] License not active — LAN server & mDNS beacon withheld until activation.');
+        return false;
+      }
+      qrServer = require('./server');
+      qrServer.startServer({ db, get mainWindow() { return mainWindow; }, getMainWindow: () => mainWindow, port: 3000 });
+      try {
+        const mdns = require('./mdns');
+        const settings = db.getSettings ? db.getSettings() : {};
+        mdns.startDiscoveryBeacon({ port: 3000, cafeName: settings.cafe_name || 'تقفيلة كافيه', version: '1.0.2' });
+      } catch (_) { }
+      return true;
+    } catch (qrErr) {
+      console.warn('[QR Server] Startup error caught safely:', qrErr.message);
+      return false;
+    }
   }
+  global.__startLicensedNetworkServices = startLicensedNetworkServices;
+  startLicensedNetworkServices();
+
+  // Scheduled background DB longevity auto-archive check (Issue 8):
+  // Runs safely when no shift is open and DB size >= WARNING_SIZE_MB (35 MB)
+  function runAutoArchiveCheck() {
+    try {
+      const setts = db.getSettings ? db.getSettings() : {};
+      if (setts.auto_archive_enabled === 'false' || setts.auto_archive_enabled === '0') return;
+      const openShift = db.currentShift ? db.currentShift() : null;
+      if (openShift) return; // Never interrupt an active shift
+      const health = db.getDatabaseHealth ? db.getDatabaseHealth() : null;
+      if (health && health.sizeMb >= (health.thresholds?.warningMb || 35)) {
+        const res = db.archiveAndCompact ? db.archiveAndCompact(365) : null;
+        if (res && res.archived) {
+          console.log(`[DB Longevity] Auto-archived ${res.deletedOrders} old orders, reclaimed ${Math.round((res.reclaimedBytes || 0) / 1024)} KB.`);
+        }
+      }
+    } catch (archErr) {
+      console.warn('[DB Longevity] Auto-archive check warning:', archErr?.message || archErr);
+    }
+  }
+  setTimeout(runAutoArchiveCheck, 60 * 1000).unref();
+  setInterval(runAutoArchiveCheck, 24 * 60 * 60 * 1000).unref();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -1262,6 +1294,10 @@ ipcMain.handle('settings:get', (event) => {
   delete safeSettings.admin_password;
   delete safeSettings.tamper_key;
   delete safeSettings.cloud_sync_secret;
+  delete safeSettings.waiter_server_token;
+  delete safeSettings.waiter_qr_token;
+  delete safeSettings._db_integrity_seal_v1;
+  delete safeSettings.pin_lockout_state;
   return safeSettings;
 });
 ipcMain.handle('settings:save', requireAdmin((_e, s) => db.saveSettings(s)));
@@ -1933,7 +1969,13 @@ ipcMain.handle('printers:list', async () => {
 });
 
 ipcMain.handle('license:status', () => db.getLicenseStatus());
-ipcMain.handle('license:activate', (_e, licenseKey) => db.activateLicense(licenseKey));
+ipcMain.handle('license:activate', (_e, licenseKey) => {
+  const res = db.activateLicense(licenseKey);
+  if (res && res.success && typeof global.__startLicensedNetworkServices === 'function') {
+    global.__startLicensedNetworkServices();
+  }
+  return res;
+});
 ipcMain.handle('license:getMachineId', () => db.getMachineId());
 ipcMain.handle('license:unlockTamper', (_e, unlockKey) => db.unlockTamper(unlockKey));
 

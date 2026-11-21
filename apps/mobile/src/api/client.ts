@@ -58,18 +58,15 @@ export class MobileApiClient {
     }
     const rawHost = (this.currentCafe.host || '127.0.0.1').trim().replace(/\/+$/, '');
     const port = this.currentCafe.port || 3000;
+    // Issue 22: Explicit protocol only — never guess HTTPS from hostname letters (breaks local hostnames like cashier-pc)
+    // and never implicitly treat third-party tunnels (trycloudflare/ngrok) as trusted without explicit scheme/config.
     if (rawHost.startsWith('http://') || rawHost.startsWith('https://')) {
       return rawHost.endsWith('/m/v1') ? rawHost : `${rawHost}/m/v1`;
     }
-    if (
-      rawHost.includes('.trycloudflare.com') ||
-      rawHost.includes('.ngrok') ||
-      rawHost.includes('.loca.lt') ||
-      (/[a-zA-Z]/.test(rawHost) && !rawHost.startsWith('localhost'))
-    ) {
-      return `https://${rawHost}/m/v1`;
-    }
-    return `http://${rawHost}:${port}/m/v1`;
+    const protocol = this.currentCafe.protocol === 'https' ? 'https' : 'http';
+    const defaultPort = protocol === 'https' ? 443 : 80;
+    const portPart = port && port !== defaultPort ? `:${port}` : '';
+    return `${protocol}://${rawHost}${portPart}/m/v1`;
   }
 
   public setCafe(cafe: CafeInfo) {
@@ -166,18 +163,28 @@ export class MobileApiClient {
 
   // --- API Methods ---
 
-  public async pair(payload: { code: string; deviceName: string; platform: string; host?: string; port?: number }): Promise<any> {
+  public async pair(payload: {
+    code?: string;
+    qrToken?: string;
+    deviceName: string;
+    platform: string;
+    host?: string;
+    port?: number;
+    protocol?: 'http' | 'https';
+  }): Promise<any> {
     if (payload.host && payload.port) {
       this.currentCafe = {
         name: 'كافيه التكية',
         host: payload.host,
-        port: payload.port
+        port: payload.port,
+        protocol: payload.protocol || 'http'
       };
     }
     const res = await this.request<any>('/pair', {
       method: 'POST',
       body: JSON.stringify({
         code: payload.code,
+        qrToken: payload.qrToken,
         deviceName: payload.deviceName,
         platform: payload.platform
       })

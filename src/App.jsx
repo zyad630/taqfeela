@@ -1108,7 +1108,7 @@ export default function App() {
     }
   }
 
-  async function handleGenerateReport(tab = reportsTab, overrideFrom = null, overrideTo = null, overrideUserId = null) {
+  async function handleGenerateReport(tab = reportsTab, overrideFrom = null, overrideTo = null, overrideUserId = null, overrideShiftId = null) {
     setReportLoading(true);
     const fromDate = overrideFrom !== null ? overrideFrom : reportDateFrom;
     const toDate = overrideTo !== null ? overrideTo : reportDateTo;
@@ -1124,13 +1124,14 @@ export default function App() {
         const res = await api.getReportSales({
           dateFrom: fromDate ? String(fromDate).slice(0, 10) : null,
           dateTo: toDate ? String(toDate).slice(0, 10) : null,
-          shiftId: reportShiftId || null,
+          shiftId: overrideShiftId || reportShiftId || null,
           userId: effectiveUserId !== 'all' ? effectiveUserId : null
         });
         if (res && !res.error) {
           setReportData({
             summary: res.summary || {},
             topProducts: Array.isArray(res.topProducts) ? res.topProducts : [],
+            allProducts: Array.isArray(res.allProducts) ? res.allProducts : [],
             dailyBreakdown: Array.isArray(res.dailyBreakdown) ? res.dailyBreakdown : [],
             bySection: Array.isArray(res.bySection) ? res.bySection : [],
             userBreakdown: Array.isArray(res.userBreakdown) ? res.userBreakdown : [],
@@ -1180,7 +1181,7 @@ export default function App() {
           setReportData(null);
         }
       } else if (tab === 'shifts') {
-        const targetShiftId = reportShiftId || (shift?.id);
+        const targetShiftId = overrideShiftId || reportShiftId || (shift?.id);
         if (!targetShiftId) {
           showToast('⚠️ يرجى اختيار الشيفت أولاً');
           setReportLoading(false);
@@ -1189,6 +1190,7 @@ export default function App() {
         const res = await api.getReportShift({ shiftId: Number(targetShiftId) });
         if (res && !res.error && res.shift) {
           setReportData({
+            shiftId: Number(targetShiftId),
             shift: res.shift,
             orders: Array.isArray(res.orders) ? res.orders : [],
             itemsSummary: Array.isArray(res.itemsSummary) ? res.itemsSummary : [],
@@ -1375,7 +1377,8 @@ export default function App() {
         filename = `تقرير_مبيعات_${reportDateFrom}_إلى_${reportDateTo}.xls`;
         title = `تقرير المبيعات من ${reportDateFrom} إلى ${reportDateTo}`;
         headers = ['م', 'اسم الصنف', 'الكمية المباعة', 'إجمالي القيمة'];
-        (reportData.topProducts || []).forEach((p, idx) => {
+        const exportProducts = (Array.isArray(reportData.allProducts) && reportData.allProducts.length) ? reportData.allProducts : (reportData.topProducts || []);
+        exportProducts.forEach((p, idx) => {
           rows.push([idx + 1, p.product_name || '', p.total_qty || 0, `${p.total_sales || 0} ${settings.currency || 'ج.م'}`]);
         });
         totals = ['الإجمالي العام', `عدد الفواتير: ${reportData.summary?.order_count || 0}`, `كاش: ${reportData.summary?.cash_sales || 0}`, `${reportData.summary?.total_sales || 0} ${settings.currency || 'ج.م'}`];

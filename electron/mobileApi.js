@@ -30,7 +30,29 @@ if (!global.__taqfeela_sse_clients) {
   global.__taqfeela_sse_clients = new Set();
 }
 const SSE_CLIENTS = global.__taqfeela_sse_clients;
-const LOGIN_RATE_LIMITS = new Map(); // userId -> { attempts, lockedUntil }
+const LOGIN_RATE_LIMITS = new Map(); // userId/username -> { attempts, lockedUntil }
+const PAIR_IP_RATE_LIMITS = new Map(); // clientIp -> [timestamps]
+const PAIR_IP_MAX_ATTEMPTS = 10;
+const PAIR_IP_WINDOW_MS = 60 * 1000;
+
+function checkPairIpRateLimit(clientIp) {
+  const ip = String(clientIp || 'unknown');
+  const now = Date.now();
+  if (PAIR_IP_RATE_LIMITS.size > 1000) {
+    for (const [k, arr] of PAIR_IP_RATE_LIMITS.entries()) {
+      const valid = arr.filter(t => now - t < PAIR_IP_WINDOW_MS);
+      if (valid.length === 0) PAIR_IP_RATE_LIMITS.delete(k);
+      else PAIR_IP_RATE_LIMITS.set(k, valid);
+    }
+  }
+  const times = (PAIR_IP_RATE_LIMITS.get(ip) || []).filter(t => now - t < PAIR_IP_WINDOW_MS);
+  if (times.length >= PAIR_IP_MAX_ATTEMPTS) {
+    return false;
+  }
+  times.push(now);
+  PAIR_IP_RATE_LIMITS.set(ip, times);
+  return true;
+}
 
 function getLocalIp() {
   const interfaces = os.networkInterfaces();
@@ -341,6 +363,15 @@ function createRouter(options = {}) {
   // -------------------------------------------------------------
   router.post('/pair', (req, res) => {
     cleanExpiredPairingCodes();
+    const clientIp = req.socket?.remoteAddress || req.ip || 'unknown';
+    if (!checkPairIpRateLimit(clientIp)) {
+      return res.status(429).json({
+        ok: false,
+        error: 'تم تجاوز الحد المسموح لمحاولات الاقتران. انتظر دقيقة وأعد المحاولة',
+        code: 'PAIR_RATE_LIMITED'
+      });
+    }
+
     const { code, qrToken, deviceName = 'موبايل ويتر', platform = 'android' } = req.body || {};
 
     const cleanCode = code != null ? String(code).trim() : '';
@@ -356,6 +387,18 @@ function createRouter(options = {}) {
 
     const session = activePairingCodes.get(lookupKey) || (cleanCode ? activePairingCodes.get(cleanCode) : null);
     if (!session) {
+      // Count failed guesses against active pairing sessions so brute-force exhausts session attempts too
+      const seenSessions = new Set();
+      for (const s of activePairingCodes.values()) {
+        if (!seenSessions.has(s)) {
+          seenSessions.add(s);
+          s.attempts = (s.attempts || 0) + 1;
+          if (s.attempts >= 5) {
+            activePairingCodes.delete(s.code);
+            activePairingCodes.delete(s.qrToken);
+          }
+        }
+      }
       return res.status(400).json({
         ok: false,
         error: 'كود الاقتران غير صحيح أو انتهت صلاحيته',
@@ -544,10 +587,6 @@ function createRouter(options = {}) {
         } catch (_) { }
       }
 
-      if (!user) {
-        return res.status(404).json({ ok: false, error: 'المستخدم غير موجود', code: 'USER_NOT_FOUND' });
-      }
-
       // Prevent unbounded growth of rate-limit map
       if (LOGIN_RATE_LIMITS.size > 500) {
         for (const [k, v] of LOGIN_RATE_LIMITS.entries()) {
@@ -557,29 +596,36 @@ function createRouter(options = {}) {
 
       const credential = isUsernameLogin ? String(password).trim() : String(pin).trim();
       let isMatch = false;
+      let matchedLegacyPlaintextPin = false;
+      let matchedLegacyPlaintextPassword = false;
       const bcrypt = require('bcryptjs');
 
-      // 1. Check explicit PIN if configured on user (supports both bcrypt-hashed and legacy PINs with constant-time compare)
-      if (user.pin && String(user.pin).trim() !== '') {
-        const storedPin = String(user.pin).trim();
-        if (/^\$2[aby]\$/.test(storedPin)) {
-          try { isMatch = bcrypt.compareSync(credential, storedPin); } catch (_) { isMatch = false; }
-        } else {
-          isMatch = timingSafeEqualStr(storedPin, credential);
+      if (user) {
+        // 1. Check explicit PIN if configured on user (supports bcrypt + auto-migrates legacy plaintext PIN)
+        if (user.pin && String(user.pin).trim() !== '') {
+          const storedPin = String(user.pin).trim();
+          if (/^\$2[aby]\$/.test(storedPin)) {
+            try { isMatch = bcrypt.compareSync(credential, storedPin); } catch (_) { isMatch = false; }
+          } else {
+            isMatch = timingSafeEqualStr(storedPin, credential);
+            if (isMatch) matchedLegacyPlaintextPin = true;
+          }
+        }
+
+        // 2. Check against user password (bcrypt + auto-migrates legacy plaintext password)
+        if (!isMatch && user.password) {
+          const storedPw = String(user.password);
+          if (/^\$2[aby]\$/.test(storedPw)) {
+            try { isMatch = bcrypt.compareSync(credential, storedPw); } catch (_) { isMatch = false; }
+          } else {
+            isMatch = timingSafeEqualStr(storedPw, credential);
+            if (isMatch) matchedLegacyPlaintextPassword = true;
+          }
         }
       }
 
-      // 2. Check against user password (strictly bcrypt when hashed; plaintext fallback ONLY for unmigrated legacy records)
-      if (!isMatch && user.password) {
-        const storedPw = String(user.password);
-        if (/^\$2[aby]\$/.test(storedPw)) {
-          try { isMatch = bcrypt.compareSync(credential, storedPw); } catch (_) { isMatch = false; }
-        } else {
-          isMatch = timingSafeEqualStr(storedPw, credential);
-        }
-      }
-
-      if (!isMatch) {
+      // Unified failure response for both missing user and wrong credential (prevents user enumeration)
+      if (!user || !isMatch) {
         rateInfo.attempts += 1;
         if (rateInfo.attempts >= 5) {
           rateInfo.lockedUntil = now + 60000; // 60 seconds lockout
@@ -594,10 +640,30 @@ function createRouter(options = {}) {
         LOGIN_RATE_LIMITS.set(rateKey, rateInfo);
         return res.status(401).json({
           ok: false,
-          error: 'كلمة السر غلط',
+          error: 'بيانات الدخول غير صحيحة',
           code: 'INVALID_PIN',
           remainingAttempts: Math.max(0, 5 - rateInfo.attempts)
         });
+      }
+
+      // Issue 11: Mandatory bcrypt migration on first successful login for legacy plaintext PIN/password
+      if (matchedLegacyPlaintextPin) {
+        try {
+          const hashedPin = bcrypt.hashSync(credential, 10);
+          db.runSql('UPDATE users SET pin = ? WHERE id = ?', [hashedPin, user.id]);
+          user.pin = hashedPin;
+        } catch (migErr) {
+          console.warn('[Mobile API] Waiter PIN bcrypt migration warning:', migErr?.message || migErr);
+        }
+      }
+      if (matchedLegacyPlaintextPassword) {
+        try {
+          const hashedPw = bcrypt.hashSync(credential, 10);
+          db.runSql('UPDATE users SET password = ? WHERE id = ?', [hashedPw, user.id]);
+          user.password = hashedPw;
+        } catch (migErr) {
+          console.warn('[Mobile API] Waiter password bcrypt migration warning:', migErr?.message || migErr);
+        }
       }
 
       // Reset rate limit on success
