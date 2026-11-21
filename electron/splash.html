@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تقفيلة - جاري التحميل</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Kufi Arabic', 'Cairo', Tahoma, sans-serif;
+      -webkit-app-region: drag;
+    }
+
+    .splash-card {
+      width: 520px;
+      padding: 30px 28px 24px;
+      background: rgba(15, 17, 23, 0.98);
+      border: 2px solid rgba(234, 179, 8, 0.45);
+      border-radius: 26px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.95),
+                  0 0 45px rgba(234, 179, 8, 0.25);
+      animation: cardAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes cardAppear {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(15px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .logo-container {
+      position: relative;
+      width: 270px;
+      height: 270px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-glow {
+      position: absolute;
+      inset: -10px;
+      border-radius: 28px;
+      background: conic-gradient(from 180deg at 50% 50%, #eab308 0deg, #f59e0b 90deg, #d97706 180deg, #eab308 360deg);
+      opacity: 0.45;
+      filter: blur(14px);
+      animation: spinGlow 5s linear infinite;
+    }
+
+    @keyframes spinGlow {
+      100% { transform: rotate(360deg); }
+    }
+
+    .splash-img {
+      position: relative;
+      width: 260px;
+      height: 260px;
+      object-fit: cover;
+      border-radius: 22px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+      border: 2px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .title {
+      font-size: 32px;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title-highlight {
+      background: linear-gradient(135deg, #fde047 0%, #eab308 50%, #d97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(234, 179, 8, 0.4);
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #cbd5e1;
+      margin-bottom: 24px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 14px;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #eab308, #f59e0b, #fbbf24);
+      border-radius: 999px;
+      animation: fillProgress 4.8s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.9);
+    }
+
+    @keyframes fillProgress {
+      0%   { width: 0%; }
+      20%  { width: 28%; }
+      50%  { width: 62%; }
+      80%  { width: 88%; }
+      100% { width: 100%; }
+    }
+
+    .status-row {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .status-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #eab308;
+      box-shadow: 0 0 10px #eab308;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(0.7); }
+    }
+
+    .version-tag {
+      background: rgba(234, 179, 8, 0.12);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      color: #facc15;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="splash-card">
+    <div class="logo-container">
+      <div class="logo-glow"></div>
+      <img class="splash-img" src="taqfeela_splash.jpg" alt="تقفيلة" />
+    </div>
+
+    <div class="title">
+      <span>نظام</span>
+      <span class="title-highlight">تقفيلة</span>
+    </div>
+    <div class="subtitle">نظام إدارة نقاط البيع والكافيهات الاحترافي</div>
+
+    <div class="progress-track">
+      <div class="progress-fill"></div>
+    </div>
+
+    <div class="status-row">
+      <div class="status-text">
+        <span class="dot"></span>
+        <span id="loadingMsg">جاري تهيئة قاعدة البيانات والأمان...</span>
+      </div>
+      <div class="version-tag">v1.0.0</div>
+    </div>
+  </div>
+
+  <script>
+    const messages = [
+      'جاري تهيئة وتأمين قاعدة البيانات...',
+      'التحقق من التراخيص وسجلات الشيفتات...',
+      'تحميل واجهة نقطة البيع والحسابات...',
+      'جاهز للعمل — أهلاً بك في تقفيلة'
+    ];
+    let idx = 0;
+    const msgEl = document.getElementById('loadingMsg');
+    const interval = setInterval(() => {
+      idx++;
+      if (idx < messages.length) {
+        msgEl.textContent = messages[idx];
+      } else {
+        clearInterval(interval);
+      }
+    }, 1200);
+  </script>
+</body>
+</html>

@@ -1,0 +1,476 @@
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <title>المنيو الإلكتروني</title>
+      <style>
+        :root {
+          --primary: #0284c7;
+          --primary-dark: #0369a1;
+          --accent: #f59e0b;
+          --bg: #f8fafc;
+          --surface: #ffffff;
+          --text: #0f172a;
+          --text-muted: #64748b;
+          --border: #e2e8f0;
+          --radius: 14px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          background: var(--bg);
+          color: var(--text);
+          direction: rtl;
+          padding-bottom: 90px;
+        }
+        header {
+          position: sticky;
+          top: 0;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(8px);
+          border-bottom: 1px solid var(--border);
+          padding: 12px 16px;
+          z-index: 50;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .header-title { font-size: 18px; font-weight: 900; }
+        .table-pill {
+          background: #0f172a;
+          color: #fff;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: bold;
+        }
+        .categories-bar {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          padding: 12px 16px;
+          background: var(--surface);
+          border-bottom: 1px solid var(--border);
+          scrollbar-width: none;
+        }
+        .categories-bar::-webkit-scrollbar { display: none; }
+        .cat-btn {
+          border: 1px solid var(--border);
+          background: var(--surface);
+          color: var(--text);
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 600;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .cat-btn.active {
+          background: var(--primary);
+          color: #fff;
+          border-color: var(--primary);
+        }
+        .container { padding: 16px; }
+        .search-box {
+          margin-bottom: 14px;
+        }
+        .search-input {
+          width: 100%;
+          padding: 10px 14px;
+          border-radius: var(--radius);
+          border: 1px solid var(--border);
+          font-size: 15px;
+          outline: none;
+          background: var(--surface);
+        }
+        .product-card {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          padding: 14px;
+          margin-bottom: 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        .p-info { flex: 1; margin-left: 10px; }
+        .p-name { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+        .p-price { font-size: 15px; font-weight: 900; color: var(--primary); }
+        .p-actions { display: flex; align-items: center; gap: 8px; }
+        .btn-circle {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          border: none;
+          background: var(--primary);
+          color: #fff;
+          font-size: 20px;
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+        .btn-circle.minus { background: #e2e8f0; color: #0f172a; }
+        .p-qty { font-size: 16px; font-weight: 800; min-width: 20px; text-align: center; }
+        .notes-link { font-size: 12px; color: var(--primary); margin-top: 4px; cursor: pointer; text-decoration: underline; }
+        .item-note-input {
+          width: 100%;
+          margin-top: 6px;
+          padding: 6px 10px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          font-size: 12px;
+          display: none;
+        }
+        /* Bottom Cart Bar */
+        .cart-bar {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: #0f172a;
+          color: #fff;
+          padding: 12px 18px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
+          z-index: 60;
+          cursor: pointer;
+        }
+        .cart-bar.hidden { display: none; }
+        .cart-btn-send {
+          background: #22c55e;
+          color: #fff;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        /* Success Overlay */
+        .overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          z-index: 100;
+        }
+        .modal-card {
+          background: #fff;
+          border-radius: 20px;
+          padding: 24px;
+          text-align: center;
+          max-width: 360px;
+          width: 100%;
+        }
+        .success-icon { font-size: 54px; margin-bottom: 12px; }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+      </style>
+    </head>
+    <body>
+      <header>
+        <div class="header-title" id="cafe-title">☕ المنيو</div>
+        <div class="table-pill" id="table-display">طاولة ...</div>
+      </header>
+
+      <div class="categories-bar" id="categories-list">
+        <button class="cat-btn active" onclick="selectCategory('all')">الكل</button>
+      </div>
+
+      <div class="container">
+        <div class="search-box">
+          <input type="text" class="search-input" id="search-input" placeholder="🔍 ابحث عن مشروب أو صنف..." oninput="filterProducts()">
+        </div>
+        <div id="products-list">
+          <div class="empty-state">جاري تحميل الأصناف...</div>
+        </div>
+      </div>
+
+      <!-- Bottom Floating Cart -->
+      <div class="cart-bar hidden" id="cart-bar">
+        <div>
+          <div style="font-size: 12px; color: #94a3b8;"><span id="cart-count">0</span> أصناف في الطلب</div>
+          <div style="font-size: 18px; font-weight: 900;"><span id="cart-total">0</span> <span id="currency-label">ج.م</span></div>
+        </div>
+        <button class="cart-btn-send" id="btn-submit" onclick="submitOrder()">
+          ☕ تحضير الطلب
+        </button>
+      </div>
+
+      <!-- Success Screen -->
+      <div class="overlay" id="success-modal" style="display: none;">
+        <div class="modal-card">
+          <div class="success-icon">☕🎉</div>
+          <h2 style="font-size: 20px; margin-bottom: 8px;">تم استلام طلبك بنجاح!</h2>
+          <p style="color: #64748b; font-size: 14px; margin-bottom: 16px;">
+            طلبك الآن قيد التحضير في البار وسيصلك إلى طاولتك في أقرب وقت.
+          </p>
+          <div style="background: #f1f5f9; padding: 10px; border-radius: 10px; font-weight: bold; margin-bottom: 18px;" id="order-confirm-info">
+            رقم الفاتورة: #...
+          </div>
+          <button class="cart-btn-send" style="width: 100%;" onclick="closeSuccess()">
+            طلب إضافي
+          </button>
+        </div>
+      </div>
+
+      <script>
+        const PAGE_BUILD = '2026-10-07-r7';
+        const urlParams = new URLSearchParams(window.location.search);
+        const tableIdParam = urlParams.get('tableId') || '';
+        const hallParam = urlParams.get('hall') || '';
+        const tableParam = urlParams.get('table') || '';
+        let currentCategory = 'all';
+        let allProducts = [];
+        let allCategories = [];
+        let cart = {}; // { productId: { item, qty, notes } }
+        let currency = 'ج.م';
+
+        const displayLabel = tableParam ? ('طاولة ' + tableParam + (hallParam ? ' (' + hallParam + ')' : '')) : 'طاولة عامة';
+        document.getElementById('table-display').innerText = displayLabel;
+
+        async function loadMenu() {
+          try {
+            const res = await fetch('/api/menu');
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+
+            if (data.cafeName) document.getElementById('cafe-title').innerText = '☕ ' + data.cafeName;
+            if (data.currency) {
+              currency = data.currency;
+              document.getElementById('currency-label').innerText = currency;
+            }
+
+            allCategories = data.categories || [];
+            allProducts = data.products || [];
+
+            renderCategories();
+            renderProducts();
+          } catch (e) {
+            document.getElementById('products-list').innerHTML = '<div class="empty-state">فشل تحميل المنيو. تأكد من الاتصال بالشبكة.</div>';
+          }
+        }
+
+        function renderCategories() {
+          const container = document.getElementById('categories-list');
+          container.innerHTML = '<button class="cat-btn active" onclick="selectCategory(\'all\', this)">الكل</button>';
+          allCategories.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = 'cat-btn';
+            btn.innerText = (cat.icon || '☕') + ' ' + cat.name;
+            btn.onclick = () => selectCategory(cat.id, btn);
+            container.appendChild(btn);
+          });
+        }
+
+        function selectCategory(catId, btnEl) {
+          currentCategory = catId;
+          document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+          if (btnEl) btnEl.classList.add('active');
+          renderProducts();
+        }
+
+        function filterProducts() {
+          renderProducts();
+        }
+
+        function renderProducts() {
+          const container = document.getElementById('products-list');
+          const query = document.getElementById('search-input').value.trim().toLowerCase();
+
+          const filtered = allProducts.filter(p => {
+            const matchesCat = currentCategory === 'all' || Number(p.category_id) === Number(currentCategory);
+            const matchesQuery = !query || p.name.toLowerCase().includes(query);
+            return matchesCat && matchesQuery;
+          });
+
+          if (filtered.length === 0) {
+            container.innerHTML = '<div class="empty-state">لا توجد أصناف مطابقة</div>';
+            return;
+          }
+
+          container.innerHTML = filtered.map(p => {
+            const inCart = cart[p.id] ? cart[p.id].qty : 0;
+            const noteVal = cart[p.id] ? (cart[p.id].notes || '') : '';
+            return `
+              <div class="product-card">
+                <div class="p-info">
+                  <div class="p-name">${escapeHtml(p.name)}</div>
+                  <div class="p-price">${p.price} ${escapeHtml(currency)}</div>
+                  <div class="notes-link" onclick="toggleNote(${p.id})">✏️ إضافة ملاحظة خاصة</div>
+                  <input type="text" id="note-${p.id}" class="item-note-input" value="${escapeHtml(noteVal)}" placeholder="مثال: سكر خفيف، بدون ثلج..." oninput="updateNote(${p.id}, this.value)" style="${noteVal ? 'display:block;' : ''}" />
+                </div>
+                <div class="p-actions">
+                  ${inCart > 0 ? `
+                    <button class="btn-circle minus" onclick="changeQty(${p.id}, -1)">-</button>
+                    <span class="p-qty">${inCart}</span>
+                  ` : ''}
+                  <button class="btn-circle" onclick="changeQty(${p.id}, 1)">+</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        function toggleNote(id) {
+          const input = document.getElementById('note-' + id);
+          if (input) {
+            input.style.display = input.style.display === 'block' ? 'none' : 'block';
+            if (input.style.display === 'block') input.focus();
+          }
+        }
+
+        function updateNote(id, text) {
+          if (cart[id]) {
+            cart[id].notes = text;
+          }
+        }
+
+        function changeQty(id, delta) {
+          const prod = allProducts.find(p => p.id === id);
+          if (!prod) return;
+
+          const current = cart[id] ? cart[id].qty : 0;
+          const next = current + delta;
+
+          if (next <= 0) {
+            delete cart[id];
+          } else {
+            const existingNotes = cart[id] ? cart[id].notes : '';
+            const noteInput = document.getElementById('note-' + id);
+            const inputVal = noteInput ? noteInput.value : '';
+            cart[id] = {
+              id: prod.id,
+              name: prod.name,
+              price: prod.price,
+              qty: next,
+              notes: existingNotes || inputVal || ''
+            };
+          }
+
+          updateCartBar();
+          renderProducts();
+        }
+
+        function updateCartBar() {
+          const items = Object.values(cart);
+          const count = items.reduce((sum, it) => sum + it.qty, 0);
+          const total = items.reduce((sum, it) => sum + (it.price * it.qty), 0);
+
+          const bar = document.getElementById('cart-bar');
+          if (count > 0) {
+            bar.classList.remove('hidden');
+            document.getElementById('cart-count').innerText = count;
+            document.getElementById('cart-total').innerText = total;
+          } else {
+            bar.classList.add('hidden');
+          }
+        }
+
+        // إنشاء clientOrderId لمنع تكرار الطلب
+        function generateOrderId() {
+          return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+        }
+        let pendingOrderId = null;
+        let pendingSig = null;
+
+        function escapeHtml(v) {
+          return String(v == null ? '' : v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        const tokenParam = urlParams.get('token') || '';
+        const dateParam = urlParams.get('d') || '';
+
+        async function submitOrder() {
+          const items = Object.values(cart);
+          if (items.length === 0) return;
+
+          const btn = document.getElementById('btn-submit');
+          btn.disabled = true;
+          btn.innerText = 'جاري الإرسال...';
+
+          // F1: clientOrderId مربوط بمحتوى السلة
+          const sig = (tableIdParam || tableParam) + '|' + Object.values(cart).map(i => i.id + ':' + i.qty + ':' + (i.notes || '')).sort().join(',');
+          if (!pendingOrderId || pendingSig !== sig) {
+            pendingOrderId = generateOrderId();
+            pendingSig = sig;
+          }
+          const clientOrderId = pendingOrderId;
+
+          try {
+            const payload = {
+              table: tableParam,
+              tableId: tableIdParam,
+              hall: hallParam,
+              token: tokenParam,
+              d: dateParam,
+              customerName: '',
+              clientOrderId,
+              items: items.map(it => ({
+                id: it.id,
+                name: it.name,
+                qty: it.qty,
+                price: it.price,
+                notes: it.notes
+              })),
+              notes: 'طلب عبر QR'
+            };
+
+            const res = await fetch('/api/qr-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'فشل إرسال الطلب');
+
+            pendingOrderId = null; // نجح الطلب — أعد ضبط المعرفين
+            pendingSig = null;
+            cart = {};
+            updateCartBar();
+            renderProducts();
+
+            const infoEl = document.getElementById('order-confirm-info');
+            if (infoEl) {
+              infoEl.innerText = '✅ تم استلام طلبك! (' + (data.tableName || ('طاولة ' + tableParam)) + ')';
+            }
+            const modalEl = document.getElementById('success-modal');
+            if (modalEl) modalEl.style.display = 'flex';
+
+            // F3: منع الضغط المتكرر 5 ثواني
+            setTimeout(() => { btn.disabled = false; btn.innerText = '☕ تحضير الطلب'; }, 5000);
+            return; // لا ننفذ finally re-enable
+          } catch (err) {
+            alert('❌ ' + (err.message || 'حدث خطأ أثناء إرسال الطلب'));
+          } finally {
+            // يعيد التفعيل فقط في حالة الخطأ (النجاح يمر بـ return)
+            if (btn.disabled && btn.innerText !== 'جاري الإرسال...') { /* already re-enabled by timeout */ }
+            else if (btn.innerText === 'جاري الإرسال...') {
+              btn.disabled = false;
+              btn.innerText = '☕ تحضير الطلب';
+            }
+          }
+        }
+
+        function closeSuccess() {
+          document.getElementById('success-modal').style.display = 'none';
+        }
+
+        loadMenu();
+      </script>
+      <div id="page-build-indicator" style="position:fixed; bottom:2px; left:4px; font-size:9px; opacity:.5; z-index:99999; pointer-events:none; font-family:monospace; color:#888;">2026-10-07-r7</div>
+    </body>
+    </html>
+    `;

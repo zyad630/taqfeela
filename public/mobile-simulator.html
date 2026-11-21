@@ -1,0 +1,2836 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>محاكي هاتف تطبيق تقفيلة كافيه - Taqfeela Phone Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Baloo+Bhaijaan+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* =========================================================
+       CSS RESET & TAQFEELA DESIGN TOKENS
+       ========================================================= */
+    :root {
+      --bg-cream: #FDF3E7;
+      --espresso: #2B1A14;
+      --espresso-light: #4A332A;
+      --coffee-muted: #7A6657;
+      --coffee-light: #5A463A;
+      --orange-brand: #EE7F14;
+      --orange-hover: #D76F0E;
+      --amber-dark: #B85C00;
+      --cream-border: #E3CDAE;
+      --cream-tint: #FCE3C4;
+      --cream-line: #F0E0C9;
+      --card-white: #FFFFFF;
+      --green-online: #2E9E62;
+      --green-chip-bg: #DDF0E3;
+      --green-chip-fg: #1F6B42;
+      
+      --phone-w: 390px;
+      --phone-h: 844px;
+      --phone-radius: 54px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #181512;
+      background-image: radial-gradient(circle at 50% 10%, #2A1D15 0%, #120F0D 100%);
+      color: #F5EAD8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 24px 16px 40px;
+      overflow-x: hidden;
+    }
+
+    /* Top Studio Bar */
+    .studio-header {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 22px;
+      background: rgba(36, 28, 22, 0.85);
+      border: 1px solid rgba(227, 205, 174, 0.18);
+      border-radius: 20px;
+      backdrop-filter: blur(12px);
+      margin-bottom: 26px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #EE7F14 0%, #B85C00 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #2B1A14;
+      font-weight: 900;
+      font-size: 24px;
+      box-shadow: 0 4px 14px rgba(238, 127, 20, 0.4);
+    }
+
+    .brand-text h1 {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #FDF3E7;
+      line-height: 1.2;
+    }
+
+    .brand-text p {
+      font-size: 13px;
+      color: #A8956C;
+    }
+
+    /* Screen Switcher Chips */
+    .nav-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .nav-pill-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(227, 205, 174, 0.2);
+      color: #E3CDAE;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .nav-pill-btn:hover {
+      background: rgba(238, 127, 20, 0.15);
+      border-color: #EE7F14;
+      color: #FFFFFF;
+      transform: translateY(-1px);
+    }
+
+    .nav-pill-btn.active {
+      background: #EE7F14;
+      border-color: #EE7F14;
+      color: #2B1A14;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(238, 127, 20, 0.35);
+    }
+
+    /* Simulator Main Canvas */
+    .simulator-container {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 36px;
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    /* =========================================================
+       SMARTPHONE FRAME (iPhone 15 Pro Titanium Style)
+       ========================================================= */
+    .phone-mockup-wrapper {
+      position: relative;
+      flex-shrink: 0;
+      filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.7)) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+      transition: transform 0.3s ease;
+    }
+
+    .phone-chassis {
+      width: 418px;
+      height: 872px;
+      background: #2b2b2f;
+      background: linear-gradient(135deg, #444349 0%, #29282D 50%, #1e1d21 100%);
+      border-radius: 56px;
+      padding: 14px;
+      box-shadow: 
+        inset 0 0 0 2px rgba(255, 255, 255, 0.15),
+        inset 0 0 0 6px #151417,
+        0 0 0 1px #5c5a61;
+      position: relative;
+      overflow: visible;
+    }
+
+    /* Hardware Buttons */
+    .btn-action {
+      position: absolute;
+      left: -4px;
+      top: 115px;
+      width: 4px;
+      height: 28px;
+      background: #444349;
+      border-radius: 4px 0 0 4px;
+    }
+    .btn-vol-up {
+      position: absolute;
+      left: -4px;
+      top: 160px;
+      width: 4px;
+      height: 52px;
+      background: #444349;
+      border-radius: 4px 0 0 4px;
+    }
+    .btn-vol-down {
+      position: absolute;
+      left: -4px;
+      top: 225px;
+      width: 4px;
+      height: 52px;
+      background: #444349;
+      border-radius: 4px 0 0 4px;
+    }
+    .btn-power {
+      position: absolute;
+      right: -4px;
+      top: 180px;
+      width: 4px;
+      height: 80px;
+      background: #444349;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* Screen Bezel and Display */
+    .phone-screen {
+      width: var(--phone-w);
+      height: var(--phone-h);
+      background: var(--bg-cream);
+      border-radius: 44px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.25);
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      position: absolute;
+      top: 11px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 124px;
+      height: 35px;
+      background: #000000;
+      border-radius: 20px;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .dynamic-island:hover {
+      width: 160px;
+    }
+    .island-cam {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #111424;
+      border: 1px solid #1a223a;
+      box-shadow: inset 0 0 4px #060913;
+    }
+    .island-mic {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #1a1a1a;
+    }
+    .island-soundwave {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      height: 12px;
+    }
+    .island-soundwave span {
+      width: 3px;
+      height: 8px;
+      background: #EE7F14;
+      border-radius: 2px;
+      animation: islandWave 1.2s infinite ease-in-out;
+    }
+    .island-soundwave span:nth-child(2) { animation-delay: 0.2s; height: 12px; }
+    .island-soundwave span:nth-child(3) { animation-delay: 0.4s; height: 6px; }
+    @keyframes islandWave {
+      0%, 100% { transform: scaleY(0.5); }
+      50% { transform: scaleY(1.2); }
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 52px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 26px 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #2B1A14;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .status-time {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-size: 16px;
+      letter-spacing: -0.2px;
+    }
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-icons svg {
+      width: 16px;
+      height: 16px;
+      stroke: #2B1A14;
+      fill: #2B1A14;
+    }
+
+    /* Home Indicator */
+    .home-indicator {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 135px;
+      height: 5px;
+      background: #2B1A14;
+      border-radius: 999px;
+      opacity: 0.8;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    /* Screen Views Container */
+    .screen-stage {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .view-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.97) translateY(12px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      background: var(--bg-cream);
+      color: var(--espresso);
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .view-screen::-webkit-scrollbar {
+      display: none;
+    }
+
+    .view-screen.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1) translateY(0);
+      z-index: 10;
+    }
+
+    /* Decorative diagonal pattern */
+    .bg-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 220px;
+      pointer-events: none;
+      background-image: repeating-linear-gradient(45deg, rgba(238,127,20,0.12) 0 1px, transparent 1px 16px), 
+                        repeating-linear-gradient(-45deg, rgba(238,127,20,0.12) 0 1px, transparent 1px 16px);
+      -webkit-mask-image: linear-gradient(#000, transparent);
+      mask-image: linear-gradient(#000, transparent);
+      z-index: 1;
+    }
+
+    /* =========================================================
+       SCREEN W1: WAITER PIN LOGIN
+       ========================================================= */
+    #screen-w1 {
+      padding: 10px 24px 34px;
+      gap: 16px;
+      justify-content: space-between;
+    }
+
+    .w1-hero {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .w1-logo-box {
+      width: 110px;
+      height: 110px;
+      border-radius: 26px;
+      background: #FFFFFF;
+      border: 2px solid var(--orange-brand);
+      box-shadow: 0 0 0 4px var(--bg-cream), 0 0 0 6px var(--cream-border), 0 10px 25px rgba(238,127,20,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .w1-logo-box svg {
+      width: 64px;
+      height: 64px;
+      fill: var(--orange-brand);
+    }
+
+    .w1-cafe-name {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--espresso);
+      margin-top: 6px;
+    }
+
+    .w1-conn-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      font-size: 12px;
+      color: var(--coffee-muted);
+      font-weight: 600;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green-online);
+      box-shadow: 0 0 0 2px rgba(46, 158, 98, 0.25);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.8; }
+    }
+
+    .w1-waiters-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .waiter-chip {
+      height: 42px;
+      border-radius: 12px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #FFFFFF;
+      color: var(--espresso);
+      border: 1px solid var(--cream-border);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .waiter-chip.active {
+      background: var(--orange-brand);
+      color: #2B1A14;
+      border-color: var(--orange-brand);
+      box-shadow: 0 4px 10px rgba(238, 127, 20, 0.35);
+    }
+
+    .w1-pin-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .w1-pin-label {
+      font-size: 14px;
+      color: var(--coffee-muted);
+      font-weight: 600;
+    }
+
+    .w1-pin-dots {
+      display: flex;
+      gap: 18px;
+      direction: ltr;
+    }
+
+    .pin-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--orange-brand);
+      background: transparent;
+      transition: all 0.2s ease;
+    }
+
+    .pin-dot.filled {
+      background: var(--orange-brand);
+      box-shadow: 0 0 8px rgba(238, 127, 20, 0.6);
+      transform: scale(1.15);
+    }
+
+    .w1-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      direction: ltr;
+      margin-top: auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    .key-btn {
+      height: 60px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-weight: 600;
+      font-size: 26px;
+      background: #FFFFFF;
+      color: var(--espresso);
+      border: 1px solid var(--cream-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+
+    .key-btn:active {
+      transform: scale(0.92);
+      background: #FCE3C4;
+      border-color: var(--orange-brand);
+    }
+
+    .key-btn.del-key {
+      font-family: 'Cairo', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--amber-dark);
+    }
+
+    .key-btn.empty-key {
+      background: transparent;
+      border: none;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    /* Shake animation on wrong PIN */
+    @keyframes shakePin {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake {
+      animation: shakePin 0.4s ease-in-out;
+    }
+
+    /* =========================================================
+       SCREEN W2: TABLES GRID
+       ========================================================= */
+    #screen-w2 {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .screen-header {
+      padding: 16px 20px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--bg-cream);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .header-info h2 {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-weight: 700;
+      font-size: 26px;
+      line-height: 1.1;
+      color: var(--espresso);
+    }
+
+    .header-info span {
+      font-size: 13px;
+      color: var(--coffee-muted);
+    }
+
+    .online-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      font-size: 12px;
+      color: var(--coffee-muted);
+      font-weight: 600;
+    }
+
+    .halls-scroller {
+      display: flex;
+      gap: 8px;
+      padding: 4px 20px 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .halls-scroller::-webkit-scrollbar { display: none; }
+
+    .hall-btn {
+      flex: none;
+      height: 38px;
+      padding: 0 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      background: #FFFFFF;
+      color: var(--espresso);
+      border: 1px solid var(--cream-border);
+      transition: all 0.2s ease;
+    }
+
+    .hall-btn.active {
+      background: var(--orange-brand);
+      color: #2B1A14;
+      border-color: var(--orange-brand);
+      font-weight: 700;
+    }
+
+    .tables-scroll-content {
+      flex: 1;
+      padding: 0 20px 20px;
+      overflow-y: auto;
+    }
+
+    .tables-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .table-card {
+      height: 114px;
+      border-radius: 18px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+      text-align: right;
+      cursor: pointer;
+      font-family: 'Cairo', sans-serif;
+      color: var(--espresso);
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      transition: all 0.18s ease;
+      position: relative;
+    }
+
+    .table-card:active {
+      transform: scale(0.96);
+    }
+
+    .table-card.free {
+      background: transparent;
+      border: 1.5px dashed var(--cream-border);
+    }
+
+    .table-card.busy {
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+
+    .table-card.mine {
+      background: var(--cream-tint);
+      border: 2px solid var(--orange-brand);
+      box-shadow: 0 4px 12px rgba(238, 127, 20, 0.15);
+    }
+
+    .table-card.wait {
+      background: #FFFFFF;
+      border: 2px dashed var(--orange-brand);
+    }
+
+    .table-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .table-number {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-weight: 700;
+      font-size: 32px;
+      line-height: 1;
+    }
+
+    .table-status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .table-card.free .table-status-dot {
+      border: 2px solid var(--coffee-muted);
+      background: transparent;
+    }
+    .table-card.busy .table-status-dot {
+      background: var(--orange-brand);
+      border: 2px solid var(--orange-brand);
+    }
+    .table-card.mine .table-status-dot {
+      background: var(--orange-brand);
+      border: 2px solid var(--orange-brand);
+      border-radius: 3px;
+    }
+    .table-card.wait .table-status-dot {
+      background: transparent;
+      border: 2px solid var(--orange-brand);
+      border-radius: 3px;
+    }
+
+    .table-card-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .table-state-label {
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .table-card.free .table-state-label { color: var(--coffee-muted); }
+    .table-card.busy .table-state-label { color: var(--espresso); }
+    .table-card.mine .table-state-label { color: var(--amber-dark); }
+    .table-card.wait .table-state-label { color: var(--amber-dark); }
+
+    .table-meta-label {
+      font-size: 11px;
+      color: var(--coffee-muted);
+    }
+
+    /* Bottom Tab Navigation */
+    .mobile-tabbar {
+      height: 72px;
+      background: #FFFFFF;
+      border-top: 1px solid var(--cream-border);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding: 6px 12px 14px;
+      margin-top: auto;
+      z-index: 30;
+    }
+
+    .tabbar-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-family: 'Cairo', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--coffee-muted);
+      position: relative;
+      transition: color 0.15s ease;
+    }
+
+    .tabbar-item.active {
+      color: var(--amber-dark);
+      font-weight: 700;
+    }
+
+    .tabbar-item svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+    }
+
+    .tab-badge {
+      position: absolute;
+      top: 2px;
+      right: 50%;
+      margin-right: -20px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 9px;
+      background: var(--orange-brand);
+      color: #2B1A14;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 18px;
+      text-align: center;
+    }
+
+    /* =========================================================
+       SCREEN W3: ORDER / PRODUCTS
+       ========================================================= */
+    #screen-w3 {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .w3-top-nav {
+      padding: 14px 12px 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-cream);
+    }
+
+    .back-circle-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: none;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--espresso);
+      transition: all 0.15s ease;
+    }
+
+    .back-circle-btn:active {
+      transform: scale(0.92);
+      background: var(--cream-tint);
+    }
+
+    .search-box-row {
+      padding: 0 20px 8px;
+    }
+
+    .search-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 44px;
+      padding: 0 14px;
+      border-radius: 14px;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+    }
+
+    .search-input-wrapper input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--espresso);
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+    }
+
+    .categories-row {
+      display: flex;
+      gap: 8px;
+      padding: 0 20px 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .categories-row::-webkit-scrollbar { display: none; }
+
+    .cat-btn {
+      flex: none;
+      height: 36px;
+      padding: 0 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: 'Cairo', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      background: #FFFFFF;
+      color: var(--espresso);
+      border: 1px solid var(--cream-border);
+      transition: all 0.15s ease;
+    }
+
+    .cat-btn.active {
+      background: var(--orange-brand);
+      color: #2B1A14;
+      border-color: var(--orange-brand);
+      font-weight: 700;
+    }
+
+    .products-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 20px 10px;
+    }
+
+    .product-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--cream-line);
+    }
+
+    .product-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .product-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--espresso);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-price {
+      font-size: 13px;
+      color: var(--amber-dark);
+      font-weight: 700;
+    }
+
+    .product-note-btn {
+      align-self: flex-start;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 6px;
+      border: 1px dashed var(--orange-brand);
+      background: transparent;
+      color: var(--amber-dark);
+      font-family: 'Cairo', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    /* LTR Stepper */
+    .qty-stepper {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      direction: ltr;
+      padding: 3px;
+      border-radius: 14px;
+      background: #FFFFFF;
+      border: 1.5px solid var(--orange-brand);
+    }
+
+    .step-btn {
+      width: 38px;
+      height: 38px;
+      border: none;
+      border-radius: 10px;
+      background: #FFFFFF;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--espresso);
+      font-size: 18px;
+      font-weight: 800;
+      transition: all 0.15s ease;
+    }
+
+    .step-btn.plus-btn {
+      background: var(--orange-brand);
+      color: #2B1A14;
+    }
+
+    .step-btn:active {
+      transform: scale(0.9);
+    }
+
+    .step-val {
+      min-width: 28px;
+      text-align: center;
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--espresso);
+    }
+
+    .add-initial-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      border: 1px solid var(--cream-border);
+      background: #FFFFFF;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--amber-dark);
+      transition: all 0.15s ease;
+    }
+
+    .add-initial-btn:active {
+      transform: scale(0.92);
+      background: var(--cream-tint);
+    }
+
+    /* Checkout Bottom Bar */
+    .w3-checkout-bar {
+      padding: 12px 20px 24px;
+      background: #FFFFFF;
+      border-top: 1px solid var(--cream-border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 30;
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.03);
+    }
+
+    .cart-summary-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .cart-count-num {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-weight: 800;
+      font-size: 26px;
+      line-height: 1;
+      color: var(--espresso);
+    }
+
+    .cart-count-label {
+      font-size: 11px;
+      color: var(--coffee-muted);
+    }
+
+    .send-cashier-btn {
+      flex: 1;
+      height: 52px;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      background: var(--orange-brand);
+      color: #2B1A14;
+      font-family: 'Cairo', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 4px var(--orange-brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.18s ease;
+    }
+
+    .send-cashier-btn:active {
+      transform: scale(0.97);
+      background: var(--orange-hover);
+    }
+
+    /* =========================================================
+       SCREEN W4: MY ORDERS
+       ========================================================= */
+    #screen-w4 {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .offline-banner {
+      margin: 4px 20px 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--cream-tint);
+      border: 1px solid var(--orange-brand);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .offline-banner svg {
+      flex: none;
+      width: 22px;
+      height: 22px;
+      stroke: var(--amber-dark);
+      margin-top: 2px;
+    }
+
+    .orders-cards-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .order-history-card {
+      border-radius: 18px;
+      padding: 14px;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+
+    .order-history-card.pending-sync {
+      border: 2px dashed var(--orange-brand);
+    }
+
+    .order-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .order-card-title {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--espresso);
+    }
+
+    .order-time-tag {
+      font-size: 12px;
+      color: var(--coffee-muted);
+      direction: ltr;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    .order-status-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      height: 26px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .order-status-badge.sent {
+      background: var(--green-chip-bg);
+      color: var(--green-chip-fg);
+    }
+
+    .order-status-badge.waiting {
+      background: var(--orange-brand);
+      color: #2B1A14;
+    }
+
+    .order-items-summary {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--coffee-light);
+    }
+
+    .retry-sync-btn {
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid var(--orange-brand);
+      background: transparent;
+      color: var(--amber-dark);
+      font-family: 'Cairo', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    /* =========================================================
+       SCREEN A1: ADMIN HOME
+       ========================================================= */
+    #screen-a1 {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .admin-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .hero-sales-box {
+      padding: 18px 18px 16px;
+      border-radius: 20px;
+      background: #FFFFFF;
+      border: 1px solid var(--orange-brand);
+      box-shadow: 0 0 0 3px var(--bg-cream), 0 0 0 4px var(--cream-border);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hero-sales-amount {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .hero-sales-amount .big-num {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-weight: 800;
+      font-size: 44px;
+      line-height: 1;
+      color: var(--amber-dark);
+    }
+
+    .hero-sales-amount .curr {
+      font-size: 18px;
+      color: var(--amber-dark);
+      font-weight: 700;
+    }
+
+    .admin-kpi-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .admin-kpi-card {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .payment-split-box {
+      padding: 14px;
+      border-radius: 16px;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .split-bar {
+      display: flex;
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      gap: 2px;
+    }
+
+    .split-legend-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    /* =========================================================
+       SCREEN A2: ADMIN REPORTS
+       ========================================================= */
+    #screen-a2 {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .chart-card {
+      padding: 14px;
+      border-radius: 16px;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bar-chart-flex {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 8px;
+      height: 140px;
+      padding-top: 10px;
+    }
+
+    .chart-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      height: 100%;
+    }
+
+    .chart-bar-rect {
+      width: 100%;
+      border-radius: 6px 6px 2px 2px;
+      background: #6B4226;
+      transition: height 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .chart-bar-rect.active-day {
+      background: var(--orange-brand);
+    }
+
+    .top-products-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .top-prod-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .top-prod-name {
+      width: 110px;
+      flex: none;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .top-prod-bar-bg {
+      flex: 1;
+      height: 10px;
+      border-radius: 5px;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      overflow: hidden;
+    }
+
+    .top-prod-bar-fill {
+      height: 100%;
+      border-radius: 5px;
+      background: var(--orange-brand);
+    }
+
+    /* Modal / Bottom Sheet for Notes */
+    .note-modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(43, 26, 20, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .note-modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .note-modal-sheet {
+      background: var(--bg-cream);
+      border-radius: 28px 28px 0 0;
+      padding: 20px 20px 36px;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
+      transform: translateY(100%);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .note-modal-overlay.open .note-modal-sheet {
+      transform: translateY(0);
+    }
+
+    .quick-notes-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .quick-note-btn {
+      padding: 10px;
+      border-radius: 12px;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      font-family: 'Cairo', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--espresso);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .quick-note-btn.active {
+      background: var(--orange-brand);
+      color: #2B1A14;
+      border-color: var(--orange-brand);
+    }
+
+    /* Toast Notification inside phone */
+    .phone-toast {
+      position: absolute;
+      top: 60px;
+      left: 20px;
+      right: 20px;
+      background: #2B1A14;
+      color: #FDF3E7;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 500;
+      transform: translateY(-80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .phone-toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Side Control Panel & Guide */
+    .controls-sidebar {
+      flex: 1;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .control-card {
+      background: rgba(36, 28, 22, 0.85);
+      border: 1px solid rgba(227, 205, 174, 0.18);
+      border-radius: 20px;
+      padding: 20px;
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .control-card h3 {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-size: 18px;
+      color: #EE7F14;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-card p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #D9CBB7;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* Switch button styling */
+    .switch-btn {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: #4A332A;
+      border-radius: 13px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .switch-btn.on {
+      background: #2E9E62;
+    }
+    .switch-knob {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: #FFFFFF;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+    }
+    .switch-btn.on .switch-knob {
+      transform: translateX(22px);
+    }
+
+    .quick-tips-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+      color: #D9CBB7;
+    }
+
+    .quick-tips-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .quick-tips-list li span.step-num {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #EE7F14;
+      color: #2B1A14;
+      font-weight: 800;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: none;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 950px) {
+      .simulator-container {
+        flex-direction: column;
+        align-items: center;
+      }
+      .controls-sidebar {
+        width: 100%;
+        max-width: 418px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Studio Bar -->
+  <header class="studio-header">
+    <div class="brand-group">
+      <div class="brand-logo">☕</div>
+      <div class="brand-text">
+        <h1>محاكي هاتف تقفيلة كافيه — نظام العزل والأمان المتقدم</h1>
+        <p>فصل تام بين تطبيق الويتر (بدون أرقام مالية) وتطبيق المالك/الأدمن</p>
+      </div>
+    </div>
+
+    <!-- Screen Navigator Pills Grouped By Role -->
+    <div class="nav-pills">
+      <div style="display:flex; align-items:center; gap:4px; background:rgba(0,0,0,0.25); padding:4px 8px; border-radius:999px; border:1px solid rgba(227,205,174,0.15);">
+        <span style="font-size:11px; color:#A8956C; font-weight:700; margin-left:4px;">📱 تطبيق الويتر:</span>
+        <button class="nav-pill-btn active" onclick="switchScreen('w1')">🔑 دخول PIN</button>
+        <button class="nav-pill-btn" onclick="switchScreen('w2')">🪑 الطاولات</button>
+        <button class="nav-pill-btn" onclick="switchScreen('w3')">🛒 الطلب</button>
+        <button class="nav-pill-btn" onclick="switchScreen('w4')">📋 طلباتي</button>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:4px; background:rgba(238,127,20,0.12); padding:4px 8px; border-radius:999px; border:1px solid rgba(238,127,20,0.3);">
+        <span style="font-size:11px; color:#EE7F14; font-weight:700; margin-left:4px;">👑 تطبيق المالك (أدمن):</span>
+        <button class="nav-pill-btn" onclick="switchScreen('a1')">📊 لوحة الأدمن</button>
+        <button class="nav-pill-btn" onclick="switchScreen('a2')">📈 التقارير</button>
+      </div>
+
+      <button class="nav-pill-btn" onclick="openQrPairingModal()" style="border-color:#2E9E62; color:#2E9E62;">
+        🔐 فحص الاقتران بـ QR
+      </button>
+    </div>
+  </header>
+
+  <div class="simulator-container">
+    
+    <!-- SMARTPHONE MOCKUP FRAME -->
+    <div class="phone-mockup-wrapper" id="phoneWrapper">
+      <div class="phone-chassis">
+        <!-- Physical Hardware Buttons -->
+        <div class="btn-action"></div>
+        <div class="btn-vol-up"></div>
+        <div class="btn-vol-down"></div>
+        <div class="btn-power"></div>
+
+        <!-- Phone Screen Glass -->
+        <div class="phone-screen">
+          
+          <!-- Dynamic Island -->
+          <div class="dynamic-island" onclick="triggerIslandAction()">
+            <div class="island-cam"></div>
+            <div class="island-soundwave">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="island-mic"></div>
+          </div>
+
+          <!-- Phone Status Bar -->
+          <div class="status-bar">
+            <span class="status-time" id="liveClock">08:05</span>
+            <div class="status-icons">
+              <!-- Cellular -->
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v4H2v-4zm4-4h2v8H6v-8zm4-4h2v12h-2V9zm4-4h2v16h-2V5zm4-4h2v20h-2V1z"/></svg>
+              <!-- WiFi -->
+              <svg id="wifiIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+              <!-- Battery -->
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H4c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2v-1.5l3 1.5V8l-3 1.5V8c0-1.1-.9-2-2-2zm0 10H4V8h13v8z"/><rect x="5.5" y="9.5" width="8" height="5" rx="1"/></svg>
+            </div>
+          </div>
+
+          <!-- In-phone Toast -->
+          <div class="phone-toast" id="phoneToast">
+            <span id="toastIcon">🎉</span>
+            <span id="toastMsg">تم الإرسال بنجاح للكاشير!</span>
+          </div>
+
+          <!-- Note Picker Modal / Bottom Sheet -->
+          <div class="note-modal-overlay" id="noteOverlay" onclick="closeNoteSheet(event)">
+            <div class="note-modal-sheet" onclick="event.stopPropagation()">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h4 style="font-size:16px; font-weight:700;">إضافة ملاحظة على الصنف</h4>
+                <button onclick="closeNoteSheet()" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--coffee-muted);">&times;</button>
+              </div>
+              <div class="quick-notes-grid">
+                <button class="quick-note-btn" onclick="applyNote('من غير سكر')">من غير سكر</button>
+                <button class="quick-note-btn" onclick="applyNote('نص سكر')">نص سكر</button>
+                <button class="quick-note-btn" onclick="applyNote('زيادة نعناع')">زيادة نعناع</button>
+                <button class="quick-note-btn" onclick="applyNote('سخن زيادة')">سخن زيادة</button>
+                <button class="quick-note-btn" onclick="applyNote('زيادة لوتس')">زيادة لوتس</button>
+                <button class="quick-note-btn" onclick="applyNote('سفري / تيك اواي')">سفري / تيك اواي</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ==============================================
+               SCREEN CONTAINER / VIEWS
+               ============================================== -->
+          <div class="screen-stage">
+
+            <!-- ==========================================
+                 SCREEN W1: WAITER PIN LOGIN
+                 ========================================== -->
+            <div class="view-screen active" id="screen-w1">
+              <div class="bg-pattern"></div>
+
+              <div class="w1-hero">
+                <div class="w1-logo-box">
+                  <svg viewBox="0 0 24 24"><path d="M18.5 3H6c-1.1 0-2 .9-2 2v5.71c0 3.83 2.95 7.18 6.78 7.29 3.96.12 7.22-3.06 7.22-7V8h.5c1.93 0 3.5-1.57 3.5-3.5S20.43 3 18.5 3zM16 5v3H6V5h10zm2.5 3H18V5h.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5zM4 19h16v2H4z"/></svg>
+                </div>
+                <h1 class="w1-cafe-name">كافيه التكية</h1>
+                <div class="w1-conn-pill">
+                  <span class="pulse-dot" id="w1ConnDot"></span>
+                  <span id="w1ConnText">متصل بالكاشير على واي فاي الكافيه</span>
+                </div>
+              </div>
+
+              <!-- Waiter Select Chips -->
+              <div class="w1-waiters-grid">
+                <button type="button" class="waiter-chip active" onclick="selectWaiter('أحمد', this)">أحمد</button>
+                <button type="button" class="waiter-chip" onclick="selectWaiter('محمود', this)">محمود</button>
+                <button type="button" class="waiter-chip" onclick="selectWaiter('سارة', this)">سارة</button>
+                <button type="button" class="waiter-chip" onclick="selectWaiter('كريم', this)">كريم</button>
+              </div>
+
+              <!-- PIN Dots -->
+              <div class="w1-pin-section">
+                <div class="w1-pin-label">الرقم السري (جرب 1234)</div>
+                <div class="w1-pin-dots" id="pinDotsWrapper">
+                  <span class="pin-dot" id="dot0"></span>
+                  <span class="pin-dot" id="dot1"></span>
+                  <span class="pin-dot" id="dot2"></span>
+                  <span class="pin-dot" id="dot3"></span>
+                </div>
+              </div>
+
+              <!-- Keypad -->
+              <div class="w1-keypad">
+                <button type="button" class="key-btn" onclick="pressPinKey('1')">1</button>
+                <button type="button" class="key-btn" onclick="pressPinKey('2')">2</button>
+                <button type="button" class="key-btn" onclick="pressPinKey('3')">3</button>
+                <button type="button" class="key-btn" onclick="pressPinKey('4')">4</button>
+                <button type="button" class="key-btn" onclick="pressPinKey('5')">5</button>
+                <button type="button" class="key-btn" onclick="pressPinKey('6')">6</button>
+                <button type="button" class="key-btn" onclick="pressPinKey('7')">7</button>
+                <button type="button" class="key-btn" onclick="pressPinKey('8')">8</button>
+                <button type="button" class="key-btn" onclick="pressPinKey('9')">9</button>
+                <button type="button" class="key-btn empty-key"></button>
+                <button type="button" class="key-btn" onclick="pressPinKey('0')">0</button>
+                <button type="button" class="key-btn del-key" onclick="deletePinKey()">حذف</button>
+              </div>
+            </div>
+
+            <!-- ==========================================
+                 SCREEN W2: TABLES GRID
+                 ========================================== -->
+            <div class="view-screen" id="screen-w2">
+              <div class="screen-header">
+                <div class="header-info">
+                  <h2>الطاولات</h2>
+                  <span id="w2WaiterSubtitle">أحمد · شيفت الصبح</span>
+                </div>
+                <div class="online-chip">
+                  <span class="pulse-dot"></span>
+                  <span>متصل</span>
+                </div>
+              </div>
+
+              <!-- Halls Horizontal Filter -->
+              <div class="halls-scroller">
+                <button class="hall-btn active" onclick="filterHall('أرضي', this)">أرضي</button>
+                <button class="hall-btn" onclick="filterHall('علوي', this)">علوي</button>
+                <button class="hall-btn" onclick="filterHall('بارك', this)">بارك</button>
+                <button class="hall-btn" onclick="filterHall('عائلات', this)">عائلات</button>
+              </div>
+
+              <!-- 2-Column Tables Grid -->
+              <div class="tables-scroll-content">
+                <div class="tables-grid" id="tablesGridContainer">
+                  <!-- Dynamically rendered by JS -->
+                </div>
+              </div>
+
+              <!-- Tabbar for Waiter (Zero Financial / Admin Visibility) -->
+              <nav class="mobile-tabbar">
+                <button class="tabbar-item active" onclick="switchScreen('w2')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+                  <span>الطاولات</span>
+                </button>
+                <button class="tabbar-item" onclick="switchScreen('w4')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+                  <span>طلباتي</span>
+                  <span class="tab-badge" id="myOrdersBadge">2</span>
+                </button>
+                <button class="tabbar-item" onclick="lockWaiterScreen()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span>قفل / خروج</span>
+                </button>
+              </nav>
+            </div>
+
+            <!-- ==========================================
+                 SCREEN W3: ORDER & PRODUCTS
+                 ========================================== -->
+            <div class="view-screen" id="screen-w3">
+              <div class="w3-top-nav">
+                <button class="back-circle-btn" onclick="switchScreen('w2')" aria-label="رجوع">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+                <div style="flex:1;">
+                  <h2 id="w3TableTitle" style="font-family:'Baloo Bhaijaan 2'; font-size:22px; line-height:1.1;">طاولة 7</h2>
+                  <span id="w3HallSubtitle" style="font-size:12px; color:var(--coffee-muted);">أرضي · طلب جديد</span>
+                </div>
+              </div>
+
+              <!-- Search -->
+              <div class="search-box-row">
+                <div class="search-input-wrapper">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--coffee-muted)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  <input type="text" id="prodSearchInput" placeholder="ابحث في المنيو..." oninput="handleProductSearch(this.value)">
+                </div>
+              </div>
+
+              <!-- Categories -->
+              <div class="categories-row">
+                <button class="cat-btn active" onclick="filterCategory('all', this)">الكل</button>
+                <button class="cat-btn" onclick="filterCategory('موهيتو', this)">موهيتو</button>
+                <button class="cat-btn" onclick="filterCategory('سموزي', this)">سموزي</button>
+                <button class="cat-btn" onclick="filterCategory('وافلز', this)">وافلز</button>
+                <button class="cat-btn" onclick="filterCategory('حلويات', this)">حلويات</button>
+                <button class="cat-btn" onclick="filterCategory('قهوة', this)">قهوة</button>
+              </div>
+
+              <!-- Products -->
+              <div class="products-list" id="productsListContainer">
+                <!-- Dynamically populated -->
+              </div>
+
+              <!-- Sticky Checkout Bar -->
+              <div class="w3-checkout-bar">
+                <div class="cart-summary-text">
+                  <span class="cart-count-num" id="cartTotalItemsCount">0</span>
+                  <span class="cart-count-label">أصناف في الطلب</span>
+                </div>
+                <button class="send-cashier-btn" onclick="handleSendOrderToCashier()">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                  <span>إرسال للكاشير والبار</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ==========================================
+                 SCREEN W4: MY ORDERS
+                 ========================================== -->
+            <div class="view-screen" id="screen-w4">
+              <div class="screen-header">
+                <div class="header-info">
+                  <h2>طلباتي</h2>
+                  <span id="w4OrdersSubtitle">شيفت الصبح · 4 طلبات</span>
+                </div>
+                <button class="online-chip" onclick="toggleOfflineSim()" style="cursor:pointer;" title="اضغط لتبديل الاتصال">
+                  <span class="pulse-dot" id="w4Dot"></span>
+                  <span id="w4ConnText">متصل</span>
+                </button>
+              </div>
+
+              <!-- Offline Banner (Shows conditionally) -->
+              <div class="offline-banner" id="w4OfflineNotice" style="display:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                  <span style="font-size:14px; font-weight:700; color:var(--amber-dark);">مفيش اتصال بالكاشير</span>
+                  <span style="font-size:12px; line-height:1.4; color:var(--coffee-light);">الطلبات محفوظة محلياً على الموبايل، وهتتبعت أوتوماتيك أول ما الاتصال يرجع.</span>
+                </div>
+              </div>
+
+              <!-- Orders List -->
+              <div class="orders-cards-list" id="myOrdersContainer">
+                <!-- Dynamically populated -->
+              </div>
+
+              <!-- Tabbar for Waiter (Zero Financial / Admin Visibility) -->
+              <nav class="mobile-tabbar">
+                <button class="tabbar-item" onclick="switchScreen('w2')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+                  <span>الطاولات</span>
+                </button>
+                <button class="tabbar-item active" onclick="switchScreen('w4')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+                  <span>طلباتي</span>
+                  <span class="tab-badge" id="myOrdersBadge2">2</span>
+                </button>
+                <button class="tabbar-item" onclick="lockWaiterScreen()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span>قفل / خروج</span>
+                </button>
+              </nav>
+            </div>
+
+            <!-- ==========================================
+                 SCREEN A1: ADMIN HOME
+                 ========================================== -->
+            <div class="view-screen" id="screen-a1">
+              <div class="screen-header">
+                <div class="header-info">
+                  <h2>لوحة الأدمن</h2>
+                  <span>الجمعة 16 أكتوبر · كافيه التكية</span>
+                </div>
+                <div class="online-chip">
+                  <span class="pulse-dot"></span>
+                  <span>كاشير 1 متصل</span>
+                </div>
+              </div>
+
+              <div class="admin-content">
+                <!-- Hero Sales -->
+                <div class="hero-sales-box">
+                  <span style="font-size:13px; color:var(--coffee-muted); font-weight:600;">مبيعات النهارده</span>
+                  <div class="hero-sales-amount">
+                    <span class="big-num">4,860</span>
+                    <span class="curr">ج.م</span>
+                  </div>
+                  <span style="font-size:12px; color:var(--green-chip-fg); font-weight:700;">▲ أعلى من نفس الوقت امبارح بـ 12%</span>
+                </div>
+
+                <!-- 2 KPIs -->
+                <div class="admin-kpi-row">
+                  <div class="admin-kpi-card">
+                    <span style="font-size:12px; color:var(--coffee-muted);">عدد الفواتير</span>
+                    <span style="font-family:'Baloo Bhaijaan 2'; font-weight:700; font-size:26px; line-height:1.1;">64</span>
+                    <span style="font-size:11px; color:var(--coffee-muted);">منها 1 ملغية</span>
+                  </div>
+                  <div class="admin-kpi-card">
+                    <span style="font-size:12px; color:var(--coffee-muted);">الشيفت المفتوح</span>
+                    <span style="font-size:16px; font-weight:700; line-height:1.3; color:var(--espresso);">أحمد رضوان</span>
+                    <span style="font-size:11px; color:var(--coffee-muted);">من 08:00 صباحًا</span>
+                  </div>
+                </div>
+
+                <!-- Payment Methods Split -->
+                <div class="payment-split-box">
+                  <span style="font-size:13px; font-weight:700;">طرق الدفع والتحصيل</span>
+                  <div class="split-bar">
+                    <div style="background:#EE7F14; width:64%;"></div>
+                    <div style="background:#5A3A28; width:26%;"></div>
+                    <div style="background:#D9B38A; width:10%;"></div>
+                  </div>
+                  <div class="split-legend-grid">
+                    <div>
+                      <span style="font-size:11px; color:var(--coffee-muted); display:flex; align-items:center; gap:4px;">
+                        <span style="width:8px; height:8px; border-radius:2px; background:#EE7F14;"></span> كاش
+                      </span>
+                      <span style="font-weight:700; font-size:14px;">3,120 ج</span>
+                    </div>
+                    <div>
+                      <span style="font-size:11px; color:var(--coffee-muted); display:flex; align-items:center; gap:4px;">
+                        <span style="width:8px; height:8px; border-radius:2px; background:#5A3A28;"></span> فيزا
+                      </span>
+                      <span style="font-weight:700; font-size:14px;">1,240 ج</span>
+                    </div>
+                    <div>
+                      <span style="font-size:11px; color:var(--coffee-muted); display:flex; align-items:center; gap:4px;">
+                        <span style="width:8px; height:8px; border-radius:2px; background:#D9B38A;"></span> محافظ
+                      </span>
+                      <span style="font-weight:700; font-size:14px;">500 ج</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Attention Alerts -->
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <span style="font-size:13px; font-weight:700;">تنبيهات وملاحظات سريعة</span>
+                  <div style="background:#FFFFFF; border-radius:14px; border:1px solid var(--cream-border); padding:10px 14px; display:flex; align-items:center; gap:10px;">
+                    <span style="width:10px; height:10px; border-radius:50%; background:#EF4444; flex:none;"></span>
+                    <div style="font-size:12px;">
+                      <strong>بن كولومبي:</strong> متبقي أقل من 1 كجم في المخزن
+                    </div>
+                  </div>
+                  <div style="background:#FFFFFF; border-radius:14px; border:1px solid var(--cream-border); padding:10px 14px; display:flex; align-items:center; gap:10px;">
+                    <span style="width:10px; height:10px; border-radius:50%; background:#EE7F14; flex:none;"></span>
+                    <div style="font-size:12px;">
+                      <strong>طاولة 4:</strong> بدون طلبات جديدة منذ ساعة ونصف
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tabbar -->
+              <nav class="mobile-tabbar">
+                <button class="tabbar-item" onclick="switchScreen('w2')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+                  <span>الطاولات</span>
+                </button>
+                <button class="tabbar-item active" onclick="switchScreen('a1')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 3h7v9H3zm11 0h7v5h-7zm0 9h7v9h-7zM3 16h7v5H3z"/></svg>
+                  <span>لوحة الأدمن</span>
+                </button>
+                <button class="tabbar-item" onclick="switchScreen('a2')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                  <span>التقارير</span>
+                </button>
+              </nav>
+            </div>
+
+            <!-- ==========================================
+                 SCREEN A2: ADMIN REPORTS
+                 ========================================== -->
+            <div class="view-screen" id="screen-a2">
+              <div class="screen-header">
+                <div class="header-info">
+                  <h2>التقارير والتحليلات</h2>
+                  <span>مبيعات الأسبوع من السبت للجمعة</span>
+                </div>
+              </div>
+
+              <div class="admin-content">
+                <!-- Weekly Bar Chart -->
+                <div class="chart-card">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:14px; font-weight:700;">المبيعات اليومية (ألف ج)</span>
+                    <span style="font-size:12px; color:var(--coffee-muted);">الإجمالي: 31.8k</span>
+                  </div>
+                  <div class="bar-chart-flex">
+                    <div class="chart-col">
+                      <span style="font-size:10px; font-weight:700;">4.1</span>
+                      <div class="chart-bar-rect" style="height:75px;"></div>
+                      <span style="font-size:10px; color:var(--coffee-muted);">سبت</span>
+                    </div>
+                    <div class="chart-col">
+                      <span style="font-size:10px; font-weight:700;">3.6</span>
+                      <div class="chart-bar-rect" style="height:65px;"></div>
+                      <span style="font-size:10px; color:var(--coffee-muted);">أحد</span>
+                    </div>
+                    <div class="chart-col">
+                      <span style="font-size:10px; font-weight:700;">4.8</span>
+                      <div class="chart-bar-rect" style="height:88px;"></div>
+                      <span style="font-size:10px; color:var(--coffee-muted);">اتنين</span>
+                    </div>
+                    <div class="chart-col">
+                      <span style="font-size:10px; font-weight:700;">3.9</span>
+                      <div class="chart-bar-rect" style="height:70px;"></div>
+                      <span style="font-size:10px; color:var(--coffee-muted);">تلات</span>
+                    </div>
+                    <div class="chart-col">
+                      <span style="font-size:10px; font-weight:700;">5.2</span>
+                      <div class="chart-bar-rect" style="height:95px;"></div>
+                      <span style="font-size:10px; color:var(--coffee-muted);">أربع</span>
+                    </div>
+                    <div class="chart-col">
+                      <span style="font-size:10px; font-weight:700;">5.4</span>
+                      <div class="chart-bar-rect" style="height:100px;"></div>
+                      <span style="font-size:10px; color:var(--coffee-muted);">خميس</span>
+                    </div>
+                    <div class="chart-col">
+                      <span style="font-size:10px; font-weight:700; color:var(--orange-brand);">4.9</span>
+                      <div class="chart-bar-rect active-day" style="height:90px;"></div>
+                      <span style="font-size:10px; font-weight:700; color:var(--orange-brand);">جمعة</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Top Selling Products -->
+                <div class="chart-card">
+                  <span style="font-size:14px; font-weight:700;">الأكثر مبيعاً هذا الأسبوع</span>
+                  <div class="top-products-list">
+                    <div class="top-prod-item">
+                      <span class="top-prod-name">موهيتو فراولة</span>
+                      <div class="top-prod-bar-bg">
+                        <div class="top-prod-bar-fill" style="width:92%;"></div>
+                      </div>
+                      <span style="font-size:12px; font-weight:700; width:34px; text-align:left;">48</span>
+                    </div>
+                    <div class="top-prod-item">
+                      <span class="top-prod-name">وافل نوتيلا</span>
+                      <div class="top-prod-bar-bg">
+                        <div class="top-prod-bar-fill" style="width:78%;"></div>
+                      </div>
+                      <span style="font-size:12px; font-weight:700; width:34px; text-align:left;">39</span>
+                    </div>
+                    <div class="top-prod-item">
+                      <span class="top-prod-name">موهيتو ريدبول</span>
+                      <div class="top-prod-bar-bg">
+                        <div class="top-prod-bar-fill" style="width:68%;"></div>
+                      </div>
+                      <span style="font-size:12px; font-weight:700; width:34px; text-align:left;">34</span>
+                    </div>
+                    <div class="top-prod-item">
+                      <span class="top-prod-name">لاتيه اسبريسو</span>
+                      <div class="top-prod-bar-bg">
+                        <div class="top-prod-bar-fill" style="width:58%;"></div>
+                      </div>
+                      <span style="font-size:12px; font-weight:700; width:34px; text-align:left;">29</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tabbar -->
+              <nav class="mobile-tabbar">
+                <button class="tabbar-item" onclick="switchScreen('w2')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+                  <span>الطاولات</span>
+                </button>
+                <button class="tabbar-item" onclick="switchScreen('a1')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 3h7v9H3zm11 0h7v5h-7zm0 9h7v9h-7zM3 16h7v5H3z"/></svg>
+                  <span>لوحة الأدمن</span>
+                </button>
+                <button class="tabbar-item active" onclick="switchScreen('a2')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                  <span>التقارير</span>
+                </button>
+              </nav>
+            </div>
+
+          </div> <!-- End screen-stage -->
+
+          <!-- Home Indicator Bar -->
+          <div class="home-indicator"></div>
+
+        </div> <!-- End phone-screen -->
+      </div> <!-- End phone-chassis -->
+    </div> <!-- End phone-mockup-wrapper -->
+
+    <!-- ==============================================
+         CONTROLS & GUIDE SIDEBAR
+         ============================================== -->
+    <aside class="controls-sidebar">
+      <div class="control-card">
+        <h3>🕹️ أدوات التحكم بالمحاكي</h3>
+        <p>تقدر تتحكم في سيناريوهات التجربة وتحاكي الحالات الواقعية:</p>
+
+        <!-- Offline Toggle -->
+        <div class="toggle-row">
+          <span>وضع عدم الاتصال (Offline Outbox):</span>
+          <div class="switch-btn" id="offlineSwitch" onclick="toggleOfflineSim()">
+            <div class="switch-knob"></div>
+          </div>
+        </div>
+
+        <!-- Audio Toggle -->
+        <div class="toggle-row">
+          <span>المؤثرات الصوتية (Web Audio):</span>
+          <div class="switch-btn on" id="soundSwitch" onclick="toggleSound()">
+            <div class="switch-knob"></div>
+          </div>
+        </div>
+
+        <!-- Phone Scale Zoom Slider -->
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; justify-content:space-between; font-size:13px;">
+            <span>حجم الهاتف على الشاشة:</span>
+            <span id="zoomLabel" style="color:#EE7F14; font-weight:700;">100%</span>
+          </div>
+          <input type="range" min="70" max="115" value="100" oninput="changePhoneScale(this.value)" style="accent-color:#EE7F14; cursor:pointer;">
+        </div>
+
+        <!-- Reset Button -->
+        <button onclick="resetSimulatorState()" style="padding:10px 16px; border-radius:12px; background:rgba(238,127,20,0.15); border:1px solid #EE7F14; color:#FDF3E7; font-family:'Cairo'; font-weight:700; cursor:pointer; margin-top:4px;">
+          🔄 إعادة تعيين البيانات للتجربة من جديد
+        </button>
+      </div>
+
+      <div class="control-card" style="border-color:#EE7F14; background:rgba(43,26,20,0.9);">
+        <h3 style="color:#EE7F14;">🛡️ الأمان والعزل التام (RBAC & Multi-Tenant)</h3>
+        <p style="font-size:12px; line-height:1.6; color:#E3CDAE;">
+          <strong>1. عزل صلاحيات الويتر:</strong> الويتر يرى فقط شاشات الخدمة والطاولات، ومستحيل يرى المبيعات أو الأرباح أو الفواتير.<br>
+          <strong>2. عزل الكافيهات (Zero Cross-Access):</strong> كافيه التكية مفصول بقاعدة بيانات وهوية مشفرة تماماً. مستحيل موبايل أو باسورد من كافيه يدخل على كافيه تاني.<br>
+          <strong>3. بصمة الجهاز و QR مؤقت:</strong> الاقتران بكود 6 أرقام أو QR ديناميكي صالح 10 دقائق فقط، ويتخزن توكن مشفر SHA-256 لا يمكن نسخه أو تزويره.
+        </p>
+        <button onclick="openQrPairingModal()" style="padding:10px 14px; border-radius:12px; background:#EE7F14; color:#2B1A14; font-family:'Cairo'; font-weight:700; font-size:13px; border:none; cursor:pointer;">
+          📲 تجربة فحص الاقتران ورمز الـ QR المؤقت
+        </button>
+      </div>
+
+      <div class="control-card">
+        <h3>💡 خطوات تجربة سيناريو الويتر الكامل:</h3>
+        <ul class="quick-tips-list">
+          <li>
+            <span class="step-num">1</span>
+            <span>اكتب الرقم السري <strong>1234</strong> في الكيباد أو من الكيبورد للولوج فوراً.</span>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <span>اضغط على أي طاولة فاضية (زي <strong>طاولة 7</strong>) لفتح شاشة الطلب.</span>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <span>زوّد الأصناف بالـ <strong>+</strong> والـ <strong>-</strong>، واضغط على ملاحظة لإضافة "بدون سكر".</span>
+          </li>
+          <li>
+            <span class="step-num">4</span>
+            <span>دوس <strong>إرسال للكاشير</strong> هتشوف إشعار فوري والطاولة هتتحول لحالة "طلبك".</span>
+          </li>
+          <li>
+            <span class="step-num">5</span>
+            <span>شغّل زرار <strong>Offline Outbox</strong> وشوف إزاي التطبيق بيحفظ الطلبات حتى لو الواي فاي فصل!</span>
+          </li>
+        </ul>
+      </div>
+    </aside>
+
+  </div> <!-- End simulator-container -->
+
+  <!-- Dynamic QR Pairing Modal -->
+  <div class="note-modal-overlay" id="qrModalOverlay" onclick="closeQrPairingModal(event)">
+    <div class="note-modal-sheet" onclick="event.stopPropagation()" style="background:#241C16; color:#FDF3E7; border:1px solid #EE7F14; max-height:85vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="font-family:'Baloo Bhaijaan 2'; font-size:18px; color:#EE7F14; display:flex; align-items:center; gap:8px;">
+          🔐 اقتران الأجهزة بـ QR كود ديناميكي وبصمة الجهاز
+        </h3>
+        <button onclick="closeQrPairingModal()" style="background:none; border:none; font-size:22px; cursor:pointer; color:#A8956C;">&times;</button>
+      </div>
+      <div style="background:rgba(0,0,0,0.3); border-radius:14px; padding:14px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%; font-size:12px; color:#A8956C;">
+          <span>جلسة اقتران كاشير تقفيلة (صالحة 10 دقائق فقط)</span>
+          <span style="color:#EE7F14; font-weight:700;">⏱️ 09:48 متبقية</span>
+        </div>
+        <!-- High-Entropy Simulated QR -->
+        <div style="background:#FFFFFF; padding:12px; border-radius:16px; display:flex; flex-direction:column; align-items:center; box-shadow:0 4px 15px rgba(0,0,0,0.5);">
+          <svg width="140" height="140" viewBox="0 0 100 100">
+            <rect width="100" height="100" fill="#FFFFFF"/>
+            <rect x="10" y="10" width="25" height="25" fill="#2B1A14"/>
+            <rect x="15" y="15" width="15" height="15" fill="#FFFFFF"/>
+            <rect x="18" y="18" width="9" height="9" fill="#2B1A14"/>
+            <rect x="65" y="10" width="25" height="25" fill="#2B1A14"/>
+            <rect x="70" y="15" width="15" height="15" fill="#FFFFFF"/>
+            <rect x="73" y="18" width="9" height="9" fill="#2B1A14"/>
+            <rect x="10" y="65" width="25" height="25" fill="#2B1A14"/>
+            <rect x="15" y="70" width="15" height="15" fill="#FFFFFF"/>
+            <rect x="18" y="73" width="9" height="9" fill="#2B1A14"/>
+            <rect x="45" y="15" width="10" height="10" fill="#2B1A14"/>
+            <rect x="45" y="45" width="12" height="12" fill="#EE7F14"/>
+            <rect x="65" y="45" width="8" height="14" fill="#2B1A14"/>
+            <rect x="45" y="70" width="14" height="8" fill="#2B1A14"/>
+            <rect x="70" y="70" width="18" height="18" fill="#2B1A14"/>
+          </svg>
+          <span style="font-family:'Baloo Bhaijaan 2'; font-size:26px; font-weight:800; color:#2B1A14; letter-spacing:4px; margin-top:4px;">481 920</span>
+        </div>
+        <div style="font-size:12px; color:#D9CBB7; text-align:center; line-height:1.5;">
+          الكود ده بيطلع من شاشة الكاشير للويتر، استخدامه مرة واحدة فقط وينتهي بعد 10 دقائق أو بعد 5 محاولات خاطئة.
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:#D9CBB7; background:rgba(255,255,255,0.04); padding:12px; border-radius:12px; border:1px solid rgba(227,205,174,0.1);">
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:#A8956C;">معرّف الكافيه (Tenant ID):</span>
+          <strong style="color:#EE7F14;">TKEE-7X2P (كافيه التكية)</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:#A8956C;">بصمة الجهاز المشفرة (SHA-256):</span>
+          <code style="font-size:10px; color:#F5EAD8;">e3b0c44298fc1c149afbf4c8996fb92427...</code>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:#A8956C;">حالة الجهاز في الكاشير:</span>
+          <span id="demoDeviceStatus" style="color:#2E9E62; font-weight:700;">● نشط وموثق (Active)</span>
+        </div>
+      </div>
+      <button onclick="testRevokeDeviceDemo()" style="padding:10px; border-radius:10px; background:#EF4444; border:none; color:#FFFFFF; font-family:'Cairo'; font-weight:700; font-size:13px; cursor:pointer;">
+        🔴 تجربة فصل الجهاز فوراً من الكاشير (Revoke Device)
+      </button>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       JAVASCRIPT LOGIC & STATE ENGINE
+       ============================================== -->
+  <script>
+    /* Global Simulator State */
+    const state = {
+      activeScreen: 'w1',
+      activeWaiter: 'أحمد',
+      pin: '',
+      correctPin: '1234',
+      isOffline: false,
+      soundEnabled: true,
+      currentHall: 'أرضي',
+      selectedTableForOrder: 7,
+      currentCategory: 'all',
+      searchQuery: '',
+      currentEditingNoteItem: null,
+      
+      // Tables DB
+      tables: [
+        { id: 1, hall: 'أرضي', num: '1', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' },
+        { id: 2, hall: 'أرضي', num: '2', state: 'مشغولة', meta: '4 أصناف · من 38 د', type: 'busy' },
+        { id: 3, hall: 'أرضي', num: '3', state: 'طلبك', meta: '3 أصناف · وصل للكاشير', type: 'mine' },
+        { id: 4, hall: 'أرضي', num: '4', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' },
+        { id: 5, hall: 'أرضي', num: '5', state: 'في الانتظار', meta: 'هيتبعت لما الاتصال يرجع', type: 'wait' },
+        { id: 6, hall: 'أرضي', num: '6', state: 'مشغولة', meta: '2 صنف · من 12 د', type: 'busy' },
+        { id: 7, hall: 'أرضي', num: '7', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' },
+        { id: 8, hall: 'أرضي', num: '8', state: 'مشغولة', meta: '6 أصناف · من 51 د', type: 'busy' },
+        // Upper floor
+        { id: 101, hall: 'علوي', num: '11', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' },
+        { id: 102, hall: 'علوي', num: '12', state: 'مشغولة', meta: '3 أصناف · من 15 د', type: 'busy' },
+        { id: 103, hall: 'علوي', num: '13', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' },
+        { id: 104, hall: 'علوي', num: '14', state: 'طلبك', meta: '1 صنف · وصل للكاشير', type: 'mine' },
+        // Outdoor Park
+        { id: 201, hall: 'بارك', num: '21', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' },
+        { id: 202, hall: 'بارك', num: '22', state: 'مشغولة', meta: '5 أصناف · من 40 د', type: 'busy' },
+        // Families
+        { id: 301, hall: 'عائلات', num: '31', state: 'مشغولة', meta: '7 أصناف · عائلة', type: 'busy' },
+        { id: 302, hall: 'عائلات', num: '32', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' }
+      ],
+
+      // Products Catalog
+      products: [
+        { id: 1, name: 'موهيتو فراولة', price: 55, cat: 'موهيتو', qty: 0, note: '' },
+        { id: 2, name: 'موهيتو ريدبول', price: 70, cat: 'موهيتو', qty: 2, note: 'من غير سكر' },
+        { id: 3, name: 'موهيتو باشن فروت', price: 60, cat: 'موهيتو', qty: 1, note: '' },
+        { id: 4, name: 'موهيتو بلو هاواي', price: 60, cat: 'موهيتو', qty: 0, note: '' },
+        { id: 5, name: 'سموزي مانجو طبيعي', price: 50, cat: 'سموزي', qty: 0, note: '' },
+        { id: 6, name: 'سموزي فراولة موز', price: 45, cat: 'سموزي', qty: 0, note: '' },
+        { id: 7, name: 'وافل نوتيلا ومكسرات', price: 65, cat: 'وافلز', qty: 0, note: '' },
+        { id: 8, name: 'بان كيك لوتس وعسل', price: 60, cat: 'حلويات', qty: 0, note: '' },
+        { id: 9, name: 'لاتيه اسبريسو دبل', price: 45, cat: 'قهوة', qty: 0, note: '' },
+        { id: 10, name: 'كابتشينو كراميل', price: 40, cat: 'قهوة', qty: 0, note: '' }
+      ],
+
+      // My Orders DB
+      myOrders: [
+        { id: 'ORD-902', table: '5', time: '14:32', items: '2× موهيتو ريدبول، 1× وافل نوتيلا', status: 'wait' },
+        { id: 'ORD-901', table: '9', time: '14:28', items: '1× سموزي مانجو، 1× بان كيك عسل', status: 'wait' },
+        { id: 'ORD-899', table: '3', time: '14:05', items: '3× موهيتو فراولة', status: 'sent' },
+        { id: 'ORD-894', table: '2', time: '13:40', items: '2× زبادو، 1× جوبلت كوكيز', status: 'sent' }
+      ]
+    };
+
+    /* =========================================================
+       AUDIO SYNTHESIZER (Web Audio API)
+       ========================================================= */
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioContext = null;
+
+    function playTone(freq, type = 'sine', duration = 0.08, gainVal = 0.1) {
+      if (!state.soundEnabled) return;
+      try {
+        if (!audioContext) audioContext = new AudioCtx();
+        if (audioContext.state === 'suspended') audioContext.resume();
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+        gain.gain.setValueAtTime(gainVal, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.start();
+        osc.stop(audioContext.currentTime + duration);
+      } catch (e) {
+        // Audio forbidden or disabled
+      }
+    }
+
+    function soundKeyClick() { playTone(580, 'sine', 0.05, 0.08); }
+    function soundKeySuccess() {
+      playTone(523.25, 'triangle', 0.1, 0.12);
+      setTimeout(() => playTone(659.25, 'triangle', 0.12, 0.12), 80);
+      setTimeout(() => playTone(783.99, 'triangle', 0.2, 0.15), 160);
+    }
+    function soundKeyError() {
+      playTone(220, 'sawtooth', 0.15, 0.15);
+      setTimeout(() => playTone(180, 'sawtooth', 0.2, 0.15), 100);
+    }
+    function soundOrderSent() {
+      playTone(440, 'sine', 0.1, 0.1);
+      setTimeout(() => playTone(554.37, 'sine', 0.1, 0.1), 100);
+      setTimeout(() => playTone(659.25, 'sine', 0.2, 0.15), 200);
+      setTimeout(() => playTone(880, 'sine', 0.35, 0.18), 300);
+    }
+
+    /* =========================================================
+       SCREEN NAVIGATION
+       ========================================================= */
+    function switchScreen(screenId) {
+      soundKeyClick();
+      state.activeScreen = screenId;
+
+      // Update Screen active classes
+      document.querySelectorAll('.view-screen').forEach(s => s.classList.remove('active'));
+      const target = document.getElementById('screen-' + screenId);
+      if (target) target.classList.add('active');
+
+      // Update Top Navbar pills
+      document.querySelectorAll('.nav-pill-btn').forEach(btn => {
+        const matches = btn.getAttribute('onclick')?.includes("'" + screenId + "'");
+        btn.classList.toggle('active', !!matches);
+      });
+
+      // Special screen initializers
+      if (screenId === 'w2') renderTablesGrid();
+      if (screenId === 'w3') renderProductsList();
+      if (screenId === 'w4') renderMyOrders();
+    }
+
+    /* =========================================================
+       SCREEN W1: PIN LOGIN LOGIC
+       ========================================================= */
+    function selectWaiter(name, elem) {
+      soundKeyClick();
+      state.activeWaiter = name;
+      document.querySelectorAll('.waiter-chip').forEach(c => c.classList.remove('active'));
+      elem.classList.add('active');
+      document.getElementById('w2WaiterSubtitle').innerText = name + ' · شيفت الصبح';
+      showToast('تم اختيار الويتر: ' + name);
+    }
+
+    function pressPinKey(num) {
+      if (state.pin.length >= 4) return;
+      soundKeyClick();
+      state.pin += num;
+      updatePinDots();
+
+      if (state.pin.length === 4) {
+        setTimeout(verifyPin, 150);
+      }
+    }
+
+    function deletePinKey() {
+      if (state.pin.length === 0) return;
+      soundKeyClick();
+      state.pin = state.pin.slice(0, -1);
+      updatePinDots();
+    }
+
+    function updatePinDots() {
+      for (let i = 0; i < 4; i++) {
+        const dot = document.getElementById('dot' + i);
+        if (i < state.pin.length) {
+          dot.classList.add('filled');
+        } else {
+          dot.classList.remove('filled');
+        }
+      }
+    }
+
+    function verifyPin() {
+      // Allow '1234' or any valid 4-digit input for friendly demo testing
+      if (state.pin === state.correctPin || state.pin.length === 4) {
+        soundKeySuccess();
+        showToast('مرحباً ' + state.activeWaiter + ' 👋', '✅');
+        setTimeout(() => {
+          state.pin = '';
+          updatePinDots();
+          switchScreen('w2');
+        }, 350);
+      } else {
+        soundKeyError();
+        const wrapper = document.getElementById('pinDotsWrapper');
+        wrapper.classList.add('shake');
+        showToast('رقم سري غير صحيح! جرّب 1234', '⚠️');
+        setTimeout(() => {
+          wrapper.classList.remove('shake');
+          state.pin = '';
+          updatePinDots();
+        }, 500);
+      }
+    }
+
+    // Physical Keyboard Listener for PIN
+    window.addEventListener('keydown', (e) => {
+      if (state.activeScreen !== 'w1') return;
+      if (e.key >= '0' && e.key <= '9') {
+        pressPinKey(e.key);
+      } else if (e.key === 'Backspace') {
+        deletePinKey();
+      } else if (e.key === 'Enter' && state.pin.length === 4) {
+        verifyPin();
+      }
+    });
+
+    /* =========================================================
+       SCREEN W2: TABLES GRID LOGIC
+       ========================================================= */
+    function filterHall(hallName, btn) {
+      soundKeyClick();
+      state.currentHall = hallName;
+      document.querySelectorAll('.hall-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderTablesGrid();
+    }
+
+    function renderTablesGrid() {
+      const container = document.getElementById('tablesGridContainer');
+      const filtered = state.tables.filter(t => t.hall === state.currentHall);
+      
+      container.innerHTML = filtered.map(t => `
+        <button type="button" class="table-card ${t.type}" onclick="openTableOrder(${t.num}, '${t.hall}')">
+          <div class="table-card-top">
+            <span class="table-number">${t.num}</span>
+            <span class="table-status-dot"></span>
+          </div>
+          <div class="table-card-bottom">
+            <span class="table-state-label">${t.state}</span>
+            <span class="table-meta-label">${t.meta}</span>
+          </div>
+        </button>
+      `).join('');
+    }
+
+    function openTableOrder(num, hall) {
+      soundKeyClick();
+      state.selectedTableForOrder = num;
+      document.getElementById('w3TableTitle').innerText = 'طاولة ' + num;
+      document.getElementById('w3HallSubtitle').innerText = hall + ' · طلب جديد';
+      switchScreen('w3');
+    }
+
+    /* =========================================================
+       SCREEN W3: ORDER & PRODUCTS LOGIC
+       ========================================================= */
+    function filterCategory(cat, btn) {
+      soundKeyClick();
+      state.currentCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderProductsList();
+    }
+
+    function handleProductSearch(val) {
+      state.searchQuery = val.trim().toLowerCase();
+      renderProductsList();
+    }
+
+    function renderProductsList() {
+      const container = document.getElementById('productsListContainer');
+      let filtered = state.products;
+
+      if (state.currentCategory !== 'all') {
+        filtered = filtered.filter(p => p.cat === state.currentCategory);
+      }
+
+      if (state.searchQuery) {
+        filtered = filtered.filter(p => p.name.toLowerCase().includes(state.searchQuery));
+      }
+
+      container.innerHTML = filtered.map(p => {
+        const hasQty = p.qty > 0;
+        return `
+          <div class="product-row">
+            <div class="product-info">
+              <span class="product-title">${p.name}</span>
+              <span class="product-price">${p.price} ج.م</span>
+              <button class="product-note-btn" onclick="openNoteSheet(${p.id})">
+                ${p.note ? '📝 ' + p.note : '+ ملاحظة'}
+              </button>
+            </div>
+            ${hasQty ? `
+              <div class="qty-stepper">
+                <button type="button" class="step-btn minus-btn" onclick="updateItemQty(${p.id}, -1)">-</button>
+                <span class="step-val">${p.qty}</span>
+                <button type="button" class="step-btn plus-btn" onclick="updateItemQty(${p.id}, 1)">+</button>
+              </div>
+            ` : `
+              <button type="button" class="add-initial-btn" onclick="updateItemQty(${p.id}, 1)">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            `}
+          </div>
+        `;
+      }).join('');
+
+      updateCartBadge();
+    }
+
+    function updateItemQty(id, delta) {
+      soundKeyClick();
+      const item = state.products.find(p => p.id === id);
+      if (!item) return;
+      item.qty = Math.max(0, item.qty + delta);
+      renderProductsList();
+    }
+
+    function updateCartBadge() {
+      const total = state.products.reduce((acc, p) => acc + p.qty, 0);
+      document.getElementById('cartTotalItemsCount').innerText = total;
+    }
+
+    function openNoteSheet(prodId) {
+      soundKeyClick();
+      state.currentEditingNoteItem = prodId;
+      document.getElementById('noteOverlay').classList.add('open');
+    }
+
+    function closeNoteSheet() {
+      document.getElementById('noteOverlay').classList.remove('open');
+      state.currentEditingNoteItem = null;
+    }
+
+    function applyNote(noteText) {
+      soundKeyClick();
+      if (state.currentEditingNoteItem) {
+        const item = state.products.find(p => p.id === state.currentEditingNoteItem);
+        if (item) item.note = noteText;
+      }
+      closeNoteSheet();
+      renderProductsList();
+      showToast('تمت إضافة الملاحظة: ' + noteText);
+    }
+
+    function handleSendOrderToCashier() {
+      const orderItems = state.products.filter(p => p.qty > 0);
+      if (orderItems.length === 0) {
+        showToast('يرجى اختيار صنف واحد على الأقل!', '⚠️');
+        soundKeyError();
+        return;
+      }
+
+      soundOrderSent();
+      const itemsSummary = orderItems.map(p => `${p.qty}× ${p.name}`).join('، ');
+
+      // Update table status in DB
+      const table = state.tables.find(t => t.num == state.selectedTableForOrder && t.hall == state.currentHall);
+      if (table) {
+        table.state = state.isOffline ? 'في الانتظار' : 'طلبك';
+        table.meta = `${orderItems.length} أصناف · ${state.isOffline ? 'محفوظ محلياً' : 'وصل للكاشير'}`;
+        table.type = state.isOffline ? 'wait' : 'mine';
+      }
+
+      // Add to my orders
+      const now = new Date();
+      const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      state.myOrders.unshift({
+        id: 'ORD-' + Math.floor(100 + Math.random() * 900),
+        table: String(state.selectedTableForOrder),
+        time: timeStr,
+        items: itemsSummary,
+        status: state.isOffline ? 'wait' : 'sent'
+      });
+
+      // Clear current cart quantities
+      state.products.forEach(p => { p.qty = 0; p.note = ''; });
+      updateCartBadge();
+
+      showToast(state.isOffline ? 'حُفظ في الأوفلاين، هيتبعت لما الاتصال يرجع 📶' : 'تم الإرسال للكاشير والبار بنجاح! 🎉');
+
+      setTimeout(() => {
+        switchScreen('w2');
+      }, 500);
+    }
+
+    /* =========================================================
+       SCREEN W4: MY ORDERS & OFFLINE ENGINE
+       ========================================================= */
+    function renderMyOrders() {
+      const container = document.getElementById('myOrdersContainer');
+      const badge = document.getElementById('myOrdersBadge');
+      const badge2 = document.getElementById('myOrdersBadge2');
+      
+      const pendingCount = state.myOrders.filter(o => o.status === 'wait').length;
+      badge.innerText = state.myOrders.length;
+      badge2.innerText = state.myOrders.length;
+
+      document.getElementById('w4OrdersSubtitle').innerText = `شيفت الصبح · ${state.myOrders.length} طلبات`;
+
+      container.innerHTML = state.myOrders.map(o => {
+        const isWaiting = o.status === 'wait';
+        return `
+          <div class="order-history-card ${isWaiting ? 'pending-sync' : ''}">
+            <div class="order-card-header">
+              <div style="display:flex; align-items:baseline; gap:8px;">
+                <span class="order-card-title">طاولة ${o.table}</span>
+                <span class="order-time-tag">${o.time}</span>
+              </div>
+              <div class="order-status-badge ${isWaiting ? 'waiting' : 'sent'}">
+                ${isWaiting ? '⏱️ في الانتظار' : '✓ وصل للكاشير'}
+              </div>
+            </div>
+            <div class="order-items-summary">${o.items}</div>
+            ${isWaiting ? `
+              <button class="retry-sync-btn" onclick="retryOrderSync('${o.id}')">
+                🔄 جرب الإرسال دلوقتي
+              </button>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function retryOrderSync(orderId) {
+      if (state.isOffline) {
+        soundKeyError();
+        showToast('لا زال وضع عدم الاتصال مفعلاً! أعد تشغيل الواي فاي أولاً.', '⚠️');
+        return;
+      }
+
+      soundOrderSent();
+      const order = state.myOrders.find(o => o.id === orderId);
+      if (order) {
+        order.status = 'sent';
+      }
+      renderMyOrders();
+      showToast('تمت المزامنة وإرسال الطلب بنجاح! 🚀');
+    }
+
+    function toggleOfflineSim() {
+      state.isOffline = !state.isOffline;
+      soundKeyClick();
+
+      const switchBtn = document.getElementById('offlineSwitch');
+      switchBtn.classList.toggle('on', state.isOffline);
+
+      const notice = document.getElementById('w4OfflineNotice');
+      notice.style.display = state.isOffline ? 'flex' : 'none';
+
+      const dot1 = document.getElementById('w1ConnDot');
+      const dot4 = document.getElementById('w4Dot');
+      const text1 = document.getElementById('w1ConnText');
+      const text4 = document.getElementById('w4ConnText');
+      const wifiIcon = document.getElementById('wifiIcon');
+
+      if (state.isOffline) {
+        dot1.style.background = '#EF4444';
+        dot4.style.background = '#EF4444';
+        text1.innerText = 'مفيش اتصال بالكاشير (Offline)';
+        text4.innerText = 'غير متصل';
+        wifiIcon.style.opacity = '0.3';
+        showToast('تم فصل الاتصال: يعمل بنظام Outbox المحلي 📦', '📶');
+      } else {
+        dot1.style.background = 'var(--green-online)';
+        dot4.style.background = 'var(--green-online)';
+        text1.innerText = 'متصل بالكاشير على واي فاي الكافيه';
+        text4.innerText = 'متصل';
+        wifiIcon.style.opacity = '1';
+        
+        // Auto sync pending orders
+        let synced = 0;
+        state.myOrders.forEach(o => {
+          if (o.status === 'wait') {
+            o.status = 'sent';
+            synced++;
+          }
+        });
+        state.tables.forEach(t => {
+          if (t.type === 'wait') {
+            t.type = 'mine';
+            t.state = 'طلبك';
+            t.meta = 'وصل للكاشير';
+          }
+        });
+
+        if (synced > 0) {
+          soundOrderSent();
+          showToast(`تمت استعادة الاتصال ومزامنة ${synced} طلبات تلقائياً! 🎉`);
+        } else {
+          showToast('الاتصال بالشبكة يعمل بكفاءة ✅');
+        }
+      }
+
+      renderMyOrders();
+      renderTablesGrid();
+    }
+
+    function toggleSound() {
+      state.soundEnabled = !state.soundEnabled;
+      const btn = document.getElementById('soundSwitch');
+      btn.classList.toggle('on', state.soundEnabled);
+      if (state.soundEnabled) soundKeyClick();
+    }
+
+    function changePhoneScale(val) {
+      document.getElementById('zoomLabel').innerText = val + '%';
+      const wrapper = document.getElementById('phoneWrapper');
+      wrapper.style.transform = `scale(${val / 100})`;
+      wrapper.style.transformOrigin = 'top center';
+    }
+
+    function showToast(msg, icon = 'ℹ️') {
+      const toast = document.getElementById('phoneToast');
+      document.getElementById('toastMsg').innerText = msg;
+      document.getElementById('toastIcon').innerText = icon;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2400);
+    }
+
+    function triggerIslandAction() {
+      soundKeyClick();
+      showToast('Taqfeela POS v1.0.2 · Hub Sync Active', '☕');
+    }
+
+    function resetSimulatorState() {
+      soundKeyClick();
+      state.pin = '';
+      updatePinDots();
+      state.products.forEach(p => { p.qty = 0; p.note = ''; });
+      updateCartBadge();
+      state.tables[6].state = 'فاضية';
+      state.tables[6].type = 'free';
+      state.tables[6].meta = 'جاهزة للطلب';
+      switchScreen('w1');
+      showToast('تمت إعادة ضبط المحاكي للحالة الافتراضية');
+    }
+
+    // Live clock updater
+    function updateClock() {
+      const d = new Date();
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      document.getElementById('liveClock').innerText = `${h}:${m}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function lockWaiterScreen() {
+      soundKeyClick();
+      state.pin = '';
+      updatePinDots();
+      switchScreen('w1');
+      showToast('تم تسجيل الخروج وقفل شاشة الويتر 🔒', '🔐');
+    }
+
+    function openQrPairingModal() {
+      soundKeyClick();
+      document.getElementById('qrModalOverlay').classList.add('open');
+    }
+
+    function closeQrPairingModal() {
+      document.getElementById('qrModalOverlay').classList.remove('open');
+    }
+
+    function testRevokeDeviceDemo() {
+      soundKeyError();
+      const statusElem = document.getElementById('demoDeviceStatus');
+      statusElem.innerText = '✖ مفصول / ملغي الصلاحية (401 Revoked)';
+      statusElem.style.color = '#EF4444';
+      closeQrPairingModal();
+      switchScreen('w1');
+      showToast('تم فصل هذا الجهاز من الكاشير! (DEVICE_REVOKED 401)', '🚫');
+      setTimeout(() => {
+        alert('محاكاة أمان الكاشير: تم إلغاء توكن هذا الموبايل في قاعدة البيانات. لن يتمكن من إرسال أي أوردر أو استعراض أي طاولة حتى يقوم الكاشير بتوليد QR جديد له.');
+      }, 300);
+    }
+
+    // Initial render
+    renderTablesGrid();
+    renderProductsList();
+    renderMyOrders();
+  </script>
+</body>
+</html>
+

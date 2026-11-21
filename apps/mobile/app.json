@@ -1,0 +1,76 @@
+{
+  "expo": {
+    "name": "taqfeela",
+    "slug": "zyad-mahmoud",
+    "owner": "zoz_0890h",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "taqfeela",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/taqfeela-logo.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#FDF3E7"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.taqfeela.pos",
+      "infoPlist": {
+        "NSCameraUsageDescription": "يستخدم تطبيق تقفيلة الكاميرا لمسح كود QR الخاص بربط الموبايل بجهاز الكاشير.",
+        "NSLocalNetworkUsageDescription": "يحتاج التطبيق للاتصال بالشبكة المحلية للتواصل مع جهاز الكاشير في الكافيه.",
+        "NSBonjourServices": [
+          "_taqfeela._tcp"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.taqfeela.pos",
+      "versionCode": 5,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "permissions": [
+        "CAMERA",
+        "ACCESS_NETWORK_STATE",
+        "ACCESS_WIFI_STATE",
+        "CHANGE_WIFI_MULTICAST_STATE",
+        "VIBRATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "يستخدم التطبيق الكاميرا لمسح باركود اقتران الكاشير."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "extraGradleProperties": {
+              "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=1024m -Djava.net.preferIPv4Stack=true"
+            }
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "c5f530a6-83f4-462b-aaa2-4de104b99d0d"
+      }
+    }
+  }
+}

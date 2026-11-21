@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*;">
+    <title>كافيه - نقطة البيع</title>
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem('cafepos_app_theme');
+          if (savedTheme === 'latte') {
+            document.documentElement.classList.add('theme-latte');
+          }
+        } catch(e) {}
+      })();
+    </script>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+        background-color: #0b0f19;
+        color: #f8fafc;
+      }
+      html.theme-latte,
+      body.theme-latte {
+        background-color: #f3ede2 !important;
+        color: #2c1e16 !important;
+      }
+      #root {
+        min-height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem('cafepos_app_theme');
+          if (savedTheme === 'latte') {
+            document.body.classList.add('theme-latte');
+          }
+        } catch(e) {}
+      })();
+    </script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,126 @@
+{
+  "name": "cafe-pos",
+  "version": "1.0.2",
+  "description": "نظام نقطة بيع وإدارة الكافيه - يعمل بدون إنترنت",
+  "main": "electron/main.js",
+  "author": "Cafe POS",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "protect": "node scripts/protect_build.js",
+    "protect:restore": "node scripts/protect_build.js --restore",
+    "test": "node scripts/run_isolated_tests.js",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && set VITE_DEV_SERVER_URL=http://localhost:5173 && electron .\"",
+    "electron:build": "set TEMP=D:\\cafe-app-build\\temp&& set TMP=D:\\cafe-app-build\\temp&& set CSC_IDENTITY_AUTO_DISCOVERY=false&& vite build && node scripts/protect_build.js && electron-builder --win --x64 && node scripts/protect_build.js --restore",
+    "electron:build:ia32": "set TEMP=D:\\cafe-app-build\\temp&& set TMP=D:\\cafe-app-build\\temp&& set CSC_IDENTITY_AUTO_DISCOVERY=false&& vite build && node scripts/protect_build.js && electron-builder --win --ia32 && node scripts/protect_build.js --restore",
+    "electron:build:all": "set TEMP=D:\\cafe-app-build\\temp&& set TMP=D:\\cafe-app-build\\temp&& set CSC_IDENTITY_AUTO_DISCOVERY=false&& vite build && node scripts/protect_build.js && electron-builder --win --x64 --ia32 && node scripts/protect_build.js --restore"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "bytenode": "^1.6.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sql.js": "^1.14.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "electron": "^22.3.27",
+    "electron-builder": "^24.13.3",
+    "javascript-obfuscator": "^5.7.0",
+    "playwright": "^1.65.0",
+    "png2icons": "^2.0.1",
+    "vite": "^5.4.2",
+    "wait-on": "^7.2.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.62.5",
+    "@rollup/rollup-win32-x64-msvc": "4.62.5"
+  },
+  "build": {
+    "electronVersion": "22.3.27",
+    "appId": "com.taqfeela.pos",
+    "productName": "TaqfeelaPOS",
+    "copyright": "Copyright © 2026 Taqfeela POS",
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/sql.js/dist/*.wasm",
+      "**/node_modules/sql.js/dist/*.js"
+    ],
+    "files": [
+      {
+        "from": "dist",
+        "to": "dist"
+      },
+      {
+        "from": "electron",
+        "to": "electron",
+        "filter": [
+          "**/*",
+          "!**/*.bak",
+          "!**/*.db",
+          "!**/*.zip",
+          "!**/*.test.js",
+          "!**/*.backup",
+          "!**/*.clean.js",
+          "!**/*.obfuscated.js"
+        ]
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "build/icon.ico"
+      },
+      "node_modules/sql.js/**/*",
+      "node_modules/bcryptjs/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/sql.js/dist/sql-wasm.wasm",
+        "to": "sql-wasm.wasm"
+      }
+    ],
+    "compression": "store",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "portable": {
+      "artifactName": "TaqfeelaPOS-Portable-1.0.2-${arch}.exe",
+      "unpackDirName": "TaqfeelaPOS-v${version}"
+    },
+    "nsis": {
+      "artifactName": "TaqfeelaPOS-Setup-1.0.2.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Taqfeela POS",
+      "include": "build/installer.nsh",
+      "deleteAppDataOnUninstall": false
+    },
+    "directories": {
+      "output": "D:\\cafe-app-build\\release",
+      "buildResources": "build"
+    }
+  }
+}

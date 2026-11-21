@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#FDF3E7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>تقفيلة - تطبيق الويتر</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Baloo+Bhaijaan+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-cream: #FDF3E7;
+      --espresso: #2B1A14;
+      --espresso-light: #4A332A;
+      --coffee-muted: #7A6657;
+      --coffee-light: #5A463A;
+      --orange-brand: #EE7F14;
+      --orange-hover: #D76F0E;
+      --amber-dark: #B85C00;
+      --cream-border: #E3CDAE;
+      --cream-tint: #FCE3C4;
+      --cream-line: #F0E0C9;
+      --card-white: #FFFFFF;
+      --green-online: #2E9E62;
+      --green-chip-bg: #DDF0E3;
+      --green-chip-fg: #1F6B42;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: -webkit-fill-available;
+      overflow: hidden;
+      background: var(--bg-cream);
+      color: var(--espresso);
+      font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    /* Screen Views */
+    .view-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      background: var(--bg-cream);
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-top: env(safe-area-inset-top, 12px);
+      padding-bottom: env(safe-area-inset-bottom, 12px);
+    }
+
+    .view-screen.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+      z-index: 10;
+    }
+
+    /* Pattern */
+    .bg-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 200px;
+      pointer-events: none;
+      background-image: repeating-linear-gradient(45deg, rgba(238,127,20,0.12) 0 1px, transparent 1px 16px), 
+                        repeating-linear-gradient(-45deg, rgba(238,127,20,0.12) 0 1px, transparent 1px 16px);
+      -webkit-mask-image: linear-gradient(#000, transparent);
+      mask-image: linear-gradient(#000, transparent);
+      z-index: 1;
+    }
+
+    /* SCREEN W1: LOGIN */
+    #screen-w1 {
+      padding: 30px 24px 20px;
+      gap: 16px;
+      justify-content: space-between;
+    }
+
+    .w1-hero {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .w1-logo-box {
+      width: 90px;
+      height: 90px;
+      border-radius: 22px;
+      background: #FFFFFF;
+      border: 2px solid var(--orange-brand);
+      box-shadow: 0 0 0 4px var(--bg-cream), 0 0 0 6px var(--cream-border), 0 10px 20px rgba(238,127,20,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .w1-logo-box svg {
+      width: 52px;
+      height: 52px;
+      fill: var(--orange-brand);
+    }
+
+    .w1-cafe-name {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--espresso);
+    }
+
+    .w1-conn-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+      font-size: 12px;
+      color: var(--coffee-muted);
+      font-weight: 600;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green-online);
+    }
+
+    .w1-waiters-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .waiter-chip {
+      height: 44px;
+      border-radius: 12px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #FFFFFF;
+      color: var(--espresso);
+      border: 1px solid var(--cream-border);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .waiter-chip.active {
+      background: var(--orange-brand);
+      color: #2B1A14;
+      border-color: var(--orange-brand);
+      box-shadow: 0 4px 10px rgba(238, 127, 20, 0.35);
+    }
+
+    .w1-pin-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .w1-pin-dots {
+      display: flex;
+      gap: 18px;
+      direction: ltr;
+    }
+
+    .pin-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--orange-brand);
+      background: transparent;
+      transition: all 0.15s ease;
+    }
+
+    .pin-dot.filled {
+      background: var(--orange-brand);
+      transform: scale(1.15);
+    }
+
+    .w1-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      direction: ltr;
+      position: relative;
+      z-index: 2;
+      margin-bottom: 10px;
+    }
+
+    .key-btn {
+      height: 64px;
+      border-radius: 18px;
+      cursor: pointer;
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-weight: 600;
+      font-size: 28px;
+      background: #FFFFFF;
+      color: var(--espresso);
+      border: 1px solid var(--cream-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    .key-btn:active {
+      transform: scale(0.92);
+      background: var(--cream-tint);
+    }
+
+    .key-btn.del-key {
+      font-family: 'Cairo', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--amber-dark);
+    }
+
+    /* SCREEN W2: TABLES */
+    #screen-w2 {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .screen-header {
+      padding: 16px 20px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--bg-cream);
+    }
+
+    .header-info h2 {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-weight: 700;
+      font-size: 26px;
+      line-height: 1.1;
+    }
+
+    .header-info span {
+      font-size: 13px;
+      color: var(--coffee-muted);
+    }
+
+    .halls-scroller {
+      display: flex;
+      gap: 8px;
+      padding: 4px 20px 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .halls-scroller::-webkit-scrollbar { display: none; }
+
+    .hall-btn {
+      flex: none;
+      height: 40px;
+      padding: 0 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      background: #FFFFFF;
+      color: var(--espresso);
+      border: 1px solid var(--cream-border);
+    }
+
+    .hall-btn.active {
+      background: var(--orange-brand);
+      color: #2B1A14;
+      border-color: var(--orange-brand);
+      font-weight: 700;
+    }
+
+    .tables-scroll-content {
+      flex: 1;
+      padding: 0 20px 20px;
+      overflow-y: auto;
+    }
+
+    .tables-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .table-card {
+      height: 114px;
+      border-radius: 18px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+      text-align: right;
+      cursor: pointer;
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+    }
+
+    .table-card:active {
+      transform: scale(0.96);
+    }
+
+    .table-card.free {
+      background: transparent;
+      border: 1.5px dashed var(--cream-border);
+    }
+
+    .table-card.busy {
+      background: #FFFFFF;
+      border: 1px solid var(--cream-border);
+    }
+
+    .table-card.mine {
+      background: var(--cream-tint);
+      border: 2px solid var(--orange-brand);
+    }
+
+    .table-number {
+      font-family: 'Baloo Bhaijaan 2', sans-serif;
+      font-weight: 700;
+      font-size: 32px;
+      line-height: 1;
+    }
+
+    /* SCREEN W3: ORDER */
+    #screen-w3 {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .w3-top-nav {
+      padding: 14px 16px 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .back-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--cream-border);
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .products-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 20px 10px;
+    }
+
+    .product-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--cream-line);
+    }
+
+    .qty-stepper {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      direction: ltr;
+      padding: 4px;
+      border-radius: 14px;
+      background: #FFFFFF;
+      border: 1.5px solid var(--orange-brand);
+    }
+
+    .step-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 10px;
+      background: #FFFFFF;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .step-btn.plus-btn {
+      background: var(--orange-brand);
+      color: #2B1A14;
+    }
+
+    .w3-checkout-bar {
+      padding: 12px 20px env(safe-area-inset-bottom, 20px);
+      background: #FFFFFF;
+      border-top: 1px solid var(--cream-border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .send-btn {
+      flex: 1;
+      height: 54px;
+      border: none;
+      border-radius: 16px;
+      background: var(--orange-brand);
+      color: #2B1A14;
+      font-family: 'Cairo', sans-serif;
+      font-weight: 700;
+      font-size: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* TABBAR */
+    .mobile-tabbar {
+      height: 64px;
+      background: #FFFFFF;
+      border-top: 1px solid var(--cream-border);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding: 6px 12px env(safe-area-inset-bottom, 10px);
+    }
+
+    .tabbar-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-family: 'Cairo', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--coffee-muted);
+    }
+
+    .tabbar-item.active {
+      color: var(--amber-dark);
+      font-weight: 700;
+    }
+
+    .tabbar-item svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+    }
+
+    /* Toast */
+    .phone-toast {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      background: #2B1A14;
+      color: #FDF3E7;
+      padding: 14px 18px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      z-index: 9999;
+      transform: translateY(-100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .phone-toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toast -->
+  <div class="phone-toast" id="phoneToast">
+    <span id="toastIcon">🎉</span>
+    <span id="toastMsg">تم الإرسال بنجاح للكاشير!</span>
+  </div>
+
+  <!-- SCREEN W1: LOGIN -->
+  <div class="view-screen active" id="screen-w1">
+    <div class="bg-pattern"></div>
+    <div class="w1-hero">
+      <div class="w1-logo-box">
+        <svg viewBox="0 0 24 24"><path d="M18.5 3H6c-1.1 0-2 .9-2 2v5.71c0 3.83 2.95 7.18 6.78 7.29 3.96.12 7.22-3.06 7.22-7V8h.5c1.93 0 3.5-1.57 3.5-3.5S20.43 3 18.5 3zM16 5v3H6V5h10zm2.5 3H18V5h.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5zM4 19h16v2H4z"/></svg>
+      </div>
+      <h1 class="w1-cafe-name">كافيه التكية</h1>
+      <div class="w1-conn-pill">
+        <span class="pulse-dot"></span>
+        <span>متصل بالكاشير (192.168.1.2)</span>
+      </div>
+    </div>
+
+    <div class="w1-waiters-grid">
+      <button type="button" class="waiter-chip active" onclick="selectWaiter('أحمد', this)">أحمد</button>
+      <button type="button" class="waiter-chip" onclick="selectWaiter('محمود', this)">محمود</button>
+      <button type="button" class="waiter-chip" onclick="selectWaiter('سارة', this)">سارة</button>
+      <button type="button" class="waiter-chip" onclick="selectWaiter('كريم', this)">كريم</button>
+    </div>
+
+    <div class="w1-pin-section">
+      <div style="font-size:13px; color:var(--coffee-muted);">اكتب الرقم السري (1234)</div>
+      <div class="w1-pin-dots">
+        <span class="pin-dot" id="dot0"></span>
+        <span class="pin-dot" id="dot1"></span>
+        <span class="pin-dot" id="dot2"></span>
+        <span class="pin-dot" id="dot3"></span>
+      </div>
+    </div>
+
+    <div class="w1-keypad">
+      <button type="button" class="key-btn" onclick="pressPin('1')">1</button>
+      <button type="button" class="key-btn" onclick="pressPin('2')">2</button>
+      <button type="button" class="key-btn" onclick="pressPin('3')">3</button>
+      <button type="button" class="key-btn" onclick="pressPin('4')">4</button>
+      <button type="button" class="key-btn" onclick="pressPin('5')">5</button>
+      <button type="button" class="key-btn" onclick="pressPin('6')">6</button>
+      <button type="button" class="key-btn" onclick="pressPin('7')">7</button>
+      <button type="button" class="key-btn" onclick="pressPin('8')">8</button>
+      <button type="button" class="key-btn" onclick="pressPin('9')">9</button>
+      <button type="button" class="key-btn" style="background:transparent; border:none;"></button>
+      <button type="button" class="key-btn" onclick="pressPin('0')">0</button>
+      <button type="button" class="key-btn del-key" onclick="deletePin()">حذف</button>
+    </div>
+  </div>
+
+  <!-- SCREEN W2: TABLES -->
+  <div class="view-screen" id="screen-w2">
+    <div class="screen-header">
+      <div class="header-info">
+        <h2>الطاولات</h2>
+        <span id="w2Sub">أحمد · شيفت الصبح</span>
+      </div>
+      <div class="w1-conn-pill">
+        <span class="pulse-dot"></span>
+        <span>متصل</span>
+      </div>
+    </div>
+
+    <div class="halls-scroller">
+      <button class="hall-btn active" onclick="filterHall('أرضي', this)">أرضي</button>
+      <button class="hall-btn" onclick="filterHall('علوي', this)">علوي</button>
+      <button class="hall-btn" onclick="filterHall('بارك', this)">بارك</button>
+    </div>
+
+    <div class="tables-scroll-content">
+      <div class="tables-grid" id="tablesContainer"></div>
+    </div>
+
+    <nav class="mobile-tabbar">
+      <button class="tabbar-item active" onclick="switchScreen('w2')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+        <span>الطاولات</span>
+      </button>
+      <button class="tabbar-item" onclick="switchScreen('w4')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        <span>طلباتي</span>
+      </button>
+      <button class="tabbar-item" onclick="lockApp()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>خروج</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- SCREEN W3: ORDER -->
+  <div class="view-screen" id="screen-w3">
+    <div class="w3-top-nav">
+      <button class="back-btn" onclick="switchScreen('w2')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <div style="flex:1;">
+        <h2 id="w3Title" style="font-family:'Baloo Bhaijaan 2'; font-size:22px; line-height:1.1;">طاولة 7</h2>
+        <span style="font-size:12px; color:var(--coffee-muted);">أرضي · طلب جديد</span>
+      </div>
+    </div>
+
+    <div class="products-list" id="productsContainer"></div>
+
+    <div class="w3-checkout-bar">
+      <div style="display:flex; flex-direction:column;">
+        <span id="cartCount" style="font-family:'Baloo Bhaijaan 2'; font-weight:800; font-size:26px; line-height:1;">0</span>
+        <span style="font-size:11px; color:var(--coffee-muted);">أصناف في الطلب</span>
+      </div>
+      <button class="send-btn" onclick="sendOrder()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        <span>إرسال للكاشير والبار</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN W4: ORDERS -->
+  <div class="view-screen" id="screen-w4">
+    <div class="screen-header">
+      <div class="header-info">
+        <h2>طلباتي</h2>
+        <span>شيفت الصبح · 3 طلبات</span>
+      </div>
+    </div>
+    <div style="flex:1; overflow-y:auto; padding:0 20px 20px; display:flex; flex-direction:column; gap:10px;" id="myOrdersContainer"></div>
+    <nav class="mobile-tabbar">
+      <button class="tabbar-item" onclick="switchScreen('w2')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+        <span>الطاولات</span>
+      </button>
+      <button class="tabbar-item active" onclick="switchScreen('w4')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        <span>طلباتي</span>
+      </button>
+      <button class="tabbar-item" onclick="lockApp()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>خروج</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    const state = {
+      waiter: 'أحمد',
+      pin: '',
+      hall: 'أرضي',
+      table: 7,
+      tables: [
+        { num: '1', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' },
+        { num: '2', state: 'مشغولة', meta: '4 أصناف · من 38 د', type: 'busy' },
+        { num: '3', state: 'طلبك', meta: '3 أصناف · وصل للكاشير', type: 'mine' },
+        { num: '4', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' },
+        { num: '5', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' },
+        { num: '6', state: 'مشغولة', meta: '2 صنف · من 12 د', type: 'busy' },
+        { num: '7', state: 'فاضية', meta: 'جاهزة للطلب', type: 'free' },
+        { num: '8', state: 'مشغولة', meta: '5 أصناف · من 45 د', type: 'busy' }
+      ],
+      products: [
+        { id: 1, name: 'موهيتو فراولة', price: 55, qty: 0 },
+        { id: 2, name: 'موهيتو ريدبول', price: 70, qty: 0 },
+        { id: 3, name: 'سموزي مانجو طبيعي', price: 50, qty: 0 },
+        { id: 4, name: 'وافل نوتيلا ومكسرات', price: 65, qty: 0 },
+        { id: 5, name: 'بان كيك لوتس وعسل', price: 60, qty: 0 },
+        { id: 6, name: 'لاتيه اسبريسو دبل', price: 45, qty: 0 },
+        { id: 7, name: 'كابتشينو كراميل', price: 40, qty: 0 }
+      ],
+      orders: [
+        { table: '3', time: '14:05', items: '3× موهيتو فراولة', status: 'sent' },
+        { table: '2', time: '13:40', items: '2× زبادو، 1× كوكيز', status: 'sent' }
+      ]
+    };
+
+    function switchScreen(id) {
+      document.querySelectorAll('.view-screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + id).classList.add('active');
+      if (id === 'w2') renderTables();
+      if (id === 'w3') renderProducts();
+      if (id === 'w4') renderOrders();
+    }
+
+    function selectWaiter(name, btn) {
+      state.waiter = name;
+      document.querySelectorAll('.waiter-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('w2Sub').innerText = name + ' · شيفت الصبح';
+    }
+
+    function pressPin(n) {
+      if (state.pin.length >= 4) return;
+      state.pin += n;
+      updateDots();
+      if (state.pin.length === 4) {
+        setTimeout(() => {
+          state.pin = '';
+          updateDots();
+          showToast('مرحباً ' + state.waiter + ' 👋');
+          switchScreen('w2');
+        }, 200);
+      }
+    }
+
+    function deletePin() {
+      state.pin = state.pin.slice(0, -1);
+      updateDots();
+    }
+
+    function updateDots() {
+      for (let i = 0; i < 4; i++) {
+        document.getElementById('dot' + i).classList.toggle('filled', i < state.pin.length);
+      }
+    }
+
+    function renderTables() {
+      document.getElementById('tablesContainer').innerHTML = state.tables.map(t => `
+        <button class="table-card ${t.type}" onclick="openTable(${t.num})">
+          <span class="table-number">${t.num}</span>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <span style="font-size:14px; font-weight:700;">${t.state}</span>
+            <span style="font-size:11px; color:var(--coffee-muted);">${t.meta}</span>
+          </div>
+        </button>
+      `).join('');
+    }
+
+    function openTable(num) {
+      state.table = num;
+      document.getElementById('w3Title').innerText = 'طاولة ' + num;
+      switchScreen('w3');
+    }
+
+    function renderProducts() {
+      document.getElementById('productsContainer').innerHTML = state.products.map(p => `
+        <div class="product-row">
+          <div>
+            <div style="font-size:15px; font-weight:700;">${p.name}</div>
+            <div style="font-size:13px; color:var(--amber-dark); font-weight:700;">${p.price} ج.م</div>
+          </div>
+          ${p.qty > 0 ? `
+            <div class="qty-stepper">
+              <button class="step-btn" onclick="updateQty(${p.id}, -1)">-</button>
+              <span style="font-family:'Baloo Bhaijaan 2'; font-weight:700; font-size:20px; min-width:26px; text-align:center;">${p.qty}</span>
+              <button class="step-btn plus-btn" onclick="updateQty(${p.id}, 1)">+</button>
+            </div>
+          ` : `
+            <button onclick="updateQty(${p.id}, 1)" style="width:44px; height:44px; border-radius:12px; border:1px solid var(--cream-border); background:#FFF; font-size:22px; color:var(--amber-dark); cursor:pointer;">+</button>
+          `}
+        </div>
+      `).join('');
+      const total = state.products.reduce((acc, p) => acc + p.qty, 0);
+      document.getElementById('cartCount').innerText = total;
+    }
+
+    function updateQty(id, delta) {
+      const p = state.products.find(x => x.id === id);
+      if (p) p.qty = Math.max(0, p.qty + delta);
+      renderProducts();
+    }
+
+    function sendOrder() {
+      const items = state.products.filter(p => p.qty > 0);
+      if (items.length === 0) {
+        showToast('اختر صنفاً واحداً على الأقل!', '⚠️');
+        return;
+      }
+      const summary = items.map(p => `${p.qty}× ${p.name}`).join('، ');
+      const t = state.tables.find(x => x.num == state.table);
+      if (t) {
+        t.state = 'طلبك';
+        t.type = 'mine';
+        t.meta = `${items.length} أصناف · وصل للكاشير`;
+      }
+      state.orders.unshift({
+        table: String(state.table),
+        time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+        items: summary,
+        status: 'sent'
+      });
+      state.products.forEach(p => p.qty = 0);
+      showToast('تم إرسال الطلب للكاشير والبار بنجاح! 🎉');
+      setTimeout(() => switchScreen('w2'), 400);
+    }
+
+    function renderOrders() {
+      document.getElementById('myOrdersContainer').innerHTML = state.orders.map(o => `
+        <div style="background:#FFF; border-radius:16px; padding:14px; border:1px solid var(--cream-border); display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-family:'Baloo Bhaijaan 2'; font-size:20px; font-weight:700;">طاولة ${o.table}</span>
+            <span style="font-size:12px; color:var(--coffee-muted);">${o.time}</span>
+          </div>
+          <div style="font-size:13px; color:var(--coffee-light);">${o.items}</div>
+          <div style="align-self:flex-start; padding:3px 10px; border-radius:999px; background:var(--green-chip-bg); color:var(--green-chip-fg); font-size:11px; font-weight:700;">✓ وصل للكاشير</div>
+        </div>
+      `).join('');
+    }
+
+    function lockApp() {
+      state.pin = '';
+      updateDots();
+      switchScreen('w1');
+    }
+
+    function showToast(msg, icon = '🎉') {
+      const t = document.getElementById('phoneToast');
+      document.getElementById('toastMsg').innerText = msg;
+      document.getElementById('toastIcon').innerText = icon;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2400);
+    }
+
+    renderTables();
+  </script>
+</body>
+</html>

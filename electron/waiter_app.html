@@ -1,0 +1,2040 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>نظام الصالة والويتر والمنيو الإلكتروني - تقفيلة كافيه</title>
+  <style>
+    /* ====================================================
+       THEME SYSTEM: Night Mode (warm) / Dark Mode (cool)
+       ==================================================== */
+
+    /* ── Default = Night Mode (دافي – جو كافيه) ── */
+    :root {
+      /* Backgrounds */
+      --bg-main:       #13100d;   /* بني قهوة غامق جداً */
+      --bg-card:       #1e1812;   /* بني داكن دافي */
+      --bg-card-hover: #2a2016;
+      --header-bg:     rgba(19, 16, 13, 0.94);
+
+      /* Borders */
+      --border:        #3b2e20;
+      --border-focus:  #d97706;
+
+      /* Primary (أمبر / ذهبي) */
+      --primary:       #d97706;
+      --primary-hover: #b45309;
+      --primary-light: rgba(217, 119, 6, 0.18);
+
+      /* Accent (كريم / بيج) */
+      --accent:        #f59e0b;
+      --accent-hover:  #d97706;
+      --accent-light:  rgba(245, 158, 11, 0.15);
+
+      /* Status */
+      --success:       #22c55e;
+      --success-light: rgba(34, 197, 94, 0.15);
+      --danger:        #f87171;
+      --danger-light:  rgba(248, 113, 113, 0.15);
+
+      /* Text */
+      --text-main:  #f5ead8;   /* كريم دافي */
+      --text-muted: #a8956c;
+      --text-dim:   #6b5a3e;
+
+      /* Radii & Shadows */
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.5);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.6);
+      --shadow-lg: 0 8px 35px rgba(0,0,0,0.75);
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", "Tajawal", Helvetica, Arial, sans-serif;
+
+      /* Theme marker */
+      --theme-name: 'night';
+    }
+
+    /* ── Dark Mode (بارد – OLED أزرق/بنفسجي) ── */
+    body.theme-dark {
+      /* Backgrounds */
+      --bg-main:       #000000;   /* OLED أسود نقي */
+      --bg-card:       #0d1117;   /* رمادي داكن */
+      --bg-card-hover: #161b22;
+      --header-bg:     rgba(0, 0, 0, 0.96);
+
+      /* Borders */
+      --border:        #21262d;
+      --border-focus:  #58a6ff;
+
+      /* Primary (أزرق إلكتريك) */
+      --primary:       #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: rgba(37, 99, 235, 0.18);
+
+      /* Accent (بنفسجي/إندي) */
+      --accent:        #a78bfa;
+      --accent-hover:  #8b5cf6;
+      --accent-light:  rgba(167, 139, 250, 0.15);
+
+      /* Status */
+      --success:       #3fb950;
+      --success-light: rgba(63, 185, 80, 0.15);
+      --danger:        #f85149;
+      --danger-light:  rgba(248, 81, 73, 0.15);
+
+      /* Text */
+      --text-main:  #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim:   #484f58;
+
+      /* Shadows (أعمق على الأسود) */
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.8);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.9);
+      --shadow-lg: 0 8px 35px rgba(0,0,0,1);
+    }
+
+    /* ── Smooth transition for all theme changes ── */
+    *, *::before, *::after {
+      transition: background-color 0.35s ease, border-color 0.35s ease, color 0.25s ease, box-shadow 0.3s ease;
+    }
+    /* (keep instant transitions for interactive elements) */
+    button, .table-card, .btn-circle, .cat-pill, .hall-tab-btn {
+      transition: transform 0.15s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    input, textarea {
+      user-select: text;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      direction: rtl;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top App Bar */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--header-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      font-size: 26px;
+      background: linear-gradient(135deg, var(--accent), var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .brand-text h1 {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--success);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .btn-icon {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+
+    .btn-icon:active {
+      transform: scale(0.92);
+      background: var(--border);
+    }
+
+    /* Main Container */
+    .app-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Screen Transitions */
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      padding-bottom: 90px;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Hall Lock Banner & Mode */
+    .hall-lock-banner {
+      display: none;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(15, 23, 42, 0.95));
+      border-bottom: 2px solid var(--success);
+      color: #6ee7b7;
+      font-weight: 800;
+      font-size: 13.5px;
+      padding: 10px 16px;
+      text-align: center;
+    }
+    body.hall-locked .hall-lock-banner {
+      display: block !important;
+    }
+    body.hall-locked .hall-tabs-wrapper {
+      display: none !important;
+    }
+
+    /* --- SCREEN 1: TABLES VIEW --- */
+    .hall-tabs-wrapper {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+    }
+
+    .hall-tabs-wrapper::-webkit-scrollbar {
+      display: none;
+    }
+
+    .hall-tabs {
+      display: inline-flex;
+      gap: 8px;
+    }
+
+    .hall-tab-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .hall-tab-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.4);
+    }
+
+    .hall-tab-badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 11px;
+    }
+
+    .hall-tab-btn:not(.active) .hall-tab-badge {
+      background: var(--bg-main);
+      color: var(--text-dim);
+    }
+
+    .controls-strip {
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .search-input-box {
+      position: relative;
+      width: 100%;
+    }
+
+    .search-input-box input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 38px 10px 14px;
+      color: var(--text-main);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    .search-input-box input:focus {
+      border-color: var(--border-focus);
+      background: #172033;
+    }
+
+    .search-icon-pos {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      font-size: 15px;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 12px;
+    }
+
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 700;
+    }
+
+    .stat-pill.total { color: var(--text-main); }
+    .stat-pill.available { color: var(--success); }
+    .stat-pill.occupied { color: var(--danger); }
+
+    /* Tables List */
+    .tables-grid-container {
+      padding: 4px 16px 20px 16px;
+    }
+
+    .tables-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Hall-lock mode: hide hall tabs bar */
+    body.hall-locked .hall-tabs-wrapper {
+      display: none;
+    }
+
+    /* Hall-lock header banner */
+    .hall-lock-banner {
+      display: none;
+      background: linear-gradient(135deg, rgba(2,132,199,0.18), rgba(11,15,23,0.9));
+      border-bottom: 2px solid var(--primary);
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: 0.3px;
+    }
+    body.hall-locked .hall-lock-banner {
+      display: block;
+    }
+
+    /* Table Card — Full-Width List Style */
+    .table-card {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      min-height: 72px;
+    }
+
+    .table-card:active {
+      transform: scale(0.98);
+    }
+
+    /* Available — green left border accent */
+    .table-card.available {
+      border-color: rgba(16, 185, 129, 0.45);
+      border-right: 5px solid var(--success);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.06), var(--bg-card));
+    }
+
+    .table-card.available:hover {
+      border-color: var(--success);
+      box-shadow: 0 0 0 1px rgba(16,185,129,0.2), var(--shadow-sm);
+    }
+
+    /* Occupied — red right border accent */
+    .table-card.occupied {
+      border-color: rgba(239, 68, 68, 0.5);
+      border-right: 5px solid var(--danger);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.09), var(--bg-card));
+    }
+
+    .table-card.occupied:hover {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 1px rgba(239,68,68,0.2), var(--shadow-sm);
+    }
+
+    .table-card-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .table-card-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      flex-shrink: 0;
+      margin-right: 10px;
+    }
+
+    .table-code-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: var(--bg-main);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      direction: ltr;
+      display: inline-block;
+    }
+
+    .table-status-tag {
+      font-size: 12px;
+      font-weight: 900;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .table-card.available .table-status-tag {
+      background: rgba(16, 185, 129, 0.18);
+      color: var(--success);
+      border: 1px solid rgba(16,185,129,0.4);
+    }
+
+    .table-card.occupied .table-status-tag {
+      background: rgba(239, 68, 68, 0.18);
+      color: var(--danger);
+      border: 1px solid rgba(239,68,68,0.4);
+    }
+
+    .table-title {
+      font-size: 17px;
+      font-weight: 900;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+
+    .table-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .table-active-badge {
+      background: var(--accent-light);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    /* Arrow chevron on each row */
+    .table-card-arrow {
+      font-size: 18px;
+      color: var(--text-dim);
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    .table-card:hover .table-card-arrow {
+      transform: translateX(-3px);
+      color: var(--text-muted);
+    }
+
+    /* --- SCREEN 2: ORDER & MENU VIEW --- */
+    .table-nav-header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 61px;
+      z-index: 90;
+    }
+
+    .btn-back-tables {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 800;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-back-tables:active {
+      transform: scale(0.95);
+      background: var(--border);
+    }
+
+    .selected-table-info {
+      text-align: left;
+      direction: ltr;
+    }
+
+    .selected-table-title {
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--text-main);
+      direction: rtl;
+    }
+
+    .selected-table-hall {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 700;
+      direction: rtl;
+    }
+
+    /* Existing Orders Accordion */
+    .existing-orders-banner {
+      margin: 12px 16px 0 16px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(15, 23, 42, 0.9));
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      overflow: hidden;
+    }
+
+    .existing-orders-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+
+    .existing-orders-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .existing-items-list {
+      margin-top: 8px;
+      border-top: 1px dashed rgba(245, 158, 11, 0.25);
+      padding-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .existing-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-main);
+    }
+
+    .existing-item-row .qty-badge {
+      font-weight: 900;
+      color: var(--accent);
+      margin-left: 6px;
+    }
+
+    /* Menu Categories & Search */
+    .menu-filter-section {
+      padding: 12px 16px 6px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .category-scroll-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+    }
+
+    .category-scroll-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cat-pill {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+
+    .cat-pill.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.4);
+    }
+
+    /* Product Cards */
+    .products-container {
+      padding: 8px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .product-row-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.2s;
+    }
+
+    .product-row-card.in-cart {
+      border-color: var(--primary);
+      background: rgba(2, 132, 199, 0.05);
+    }
+
+    .prod-main-info {
+      flex: 1;
+      padding-left: 10px;
+    }
+
+    .prod-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+
+    .prod-price {
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--accent);
+    }
+
+    .btn-toggle-note {
+      font-size: 11px;
+      color: var(--primary);
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      margin-top: 5px;
+    }
+
+    .item-note-field {
+      width: 100%;
+      margin-top: 6px;
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--text-main);
+      font-size: 12px;
+      display: none;
+      font-family: inherit;
+    }
+
+    .item-note-field.visible {
+      display: block;
+    }
+
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .btn-circle:active {
+      transform: scale(0.9);
+    }
+
+    .btn-circle.add {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-circle.minus {
+      background: #334155;
+      color: #fff;
+    }
+
+    .qty-display {
+      font-size: 16px;
+      font-weight: 900;
+      min-width: 22px;
+      text-align: center;
+      color: var(--text-main);
+    }
+
+    /* Floating Bottom Action Bar */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-top: 1px solid var(--border);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 100;
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
+      transform: translateY(100%);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .bottom-bar.visible {
+      transform: translateY(0);
+    }
+
+    .cart-summary {
+      flex: 1;
+    }
+
+    .cart-count-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .cart-total-amount {
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--text-main);
+    }
+
+    .cart-total-amount span {
+      color: var(--accent);
+    }
+
+    .btn-prepare-order {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 12px 22px;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+      transition: all 0.2s;
+    }
+
+    .btn-prepare-order:active {
+      transform: scale(0.96);
+    }
+
+    .btn-prepare-order:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Modal / Popups */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 200;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+      animation: popIn 0.2s ease-out;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-icon {
+      font-size: 52px;
+      margin-bottom: 12px;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .modal-details-box {
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-align: right;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-modal-primary {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn-modal-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 11px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .empty-state-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+      opacity: 0.7;
+    }
+
+    /* Theme Toggle Button */
+    .btn-theme-toggle {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 17px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .btn-theme-toggle:active {
+      transform: scale(0.9);
+    }
+
+    /* Night mode indicator strip at top */
+    body:not(.theme-dark)::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #d97706, #f59e0b, #92400e);
+      z-index: 9999;
+      pointer-events: none;
+    }
+    body.theme-dark::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #2563eb, #a78bfa, #2563eb);
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    /* Toast Notification */
+    .toast-box {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: var(--bg-card);
+      border: 1px solid var(--accent);
+      color: var(--text-main);
+      padding: 10px 18px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: var(--shadow-md);
+      z-index: 300;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+    }
+
+    .toast-box.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header class="app-header">
+    <div class="brand-box">
+      <span class="brand-icon">☕</span>
+      <div class="brand-text">
+        <h1 id="app-cafe-name">تقفيلة كافيه</h1>
+        <div class="brand-subtitle" id="app-subtitle">نظام الصالة والويتر</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="status-badge" id="online-status">
+        <span class="status-dot"></span>
+        <span id="status-label">متصل بالسيستم</span>
+      </div>
+      <button class="btn-theme-toggle" id="btn-theme" title="تبديل الثيم" onclick="toggleTheme()">🌙</button>
+      <button class="btn-icon" title="تحديث البيانات" onclick="refreshData(true)">🔄</button>
+    </div>
+  </header>
+
+  <!-- Hall Lock Banner (shows when opened via hall QR) -->
+  <div class="hall-lock-banner" id="hall-lock-banner">🪑 صالة: <span id="hall-lock-label"></span></div>
+
+  <!-- App Body -->
+  <main class="app-body">
+
+    <!-- ==================== SCREEN 1: TABLES VIEW ==================== -->
+    <section class="screen active" id="screen-tables">
+      <!-- Hall Tabs Bar (hidden in hall-lock mode) -->
+      <div class="hall-tabs-wrapper">
+        <div class="hall-tabs" id="hall-tabs-container">
+          <button class="hall-tab-btn active" onclick="switchHall('all', this)">
+            🌟 كل الصالات
+            <span class="hall-tab-badge" id="count-badge-all">0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Controls & Stats Strip -->
+      <div class="controls-strip">
+        <div class="search-input-box">
+          <span class="search-icon-pos">🔍</span>
+          <input type="text" id="tables-search" placeholder="ابحث برقم أو اسم الطاولة..." oninput="onTablesSearchChange(this.value)">
+        </div>
+
+        <div class="stats-bar">
+          <div class="stat-pill total">
+            <span>طاولات الصالة:</span>
+            <span id="stat-total-count">0</span>
+          </div>
+          <div class="stat-pill available">
+            <span>🟢 متاح:</span>
+            <span id="stat-avail-count">0</span>
+          </div>
+          <div class="stat-pill occupied">
+            <span>🔴 مشغول:</span>
+            <span id="stat-occ-count">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tables List Container -->
+      <div class="tables-grid-container">
+        <div class="tables-grid" id="tables-grid">
+          <div class="empty-state">جاري تحميل الطاولات...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCREEN 2: ORDER & MENU VIEW ==================== -->
+    <section class="screen" id="screen-order">
+      <!-- Selected Table Nav Header -->
+      <div class="table-nav-header">
+        <button class="btn-back-tables" onclick="returnToTables()">
+          <span>⬅️</span>
+          <span>خروج / تغيير الطاولة</span>
+        </button>
+        <div class="selected-table-info">
+          <div class="selected-table-title" id="selected-table-name">طاولة ...</div>
+          <div class="selected-table-hall" id="selected-table-hall">الصالة: ...</div>
+        </div>
+      </div>
+
+      <!-- Existing Orders On Table (If any) -->
+      <div class="existing-orders-banner" id="existing-orders-banner" style="display: none;">
+        <div class="existing-orders-header" onclick="toggleExistingList()">
+          <span class="existing-orders-title">
+            <span>📋</span>
+            <span id="existing-orders-header-text">أصناف مسجلة على الطاولة (0)</span>
+          </span>
+          <span id="existing-toggle-arrow" style="font-size: 12px; color: var(--accent);">▼</span>
+        </div>
+        <div class="existing-items-list" id="existing-items-list" style="display: block;">
+          <!-- dynamically rendered existing items -->
+        </div>
+      </div>
+
+      <!-- Menu Categories & Search -->
+      <div class="menu-filter-section">
+        <div class="search-input-box">
+          <span class="search-icon-pos">🔍</span>
+          <input type="text" id="menu-search" placeholder="ابحث عن مشروب أو صنف في المنيو..." oninput="onMenuSearchChange(this.value)">
+        </div>
+
+        <div class="category-scroll-bar" id="category-scroll-bar">
+          <button class="cat-pill active" onclick="switchCategory('all', this)">الكل</button>
+        </div>
+      </div>
+
+      <!-- Products List -->
+      <div class="products-container" id="products-list">
+        <div class="empty-state">جاري تحميل الأصناف...</div>
+      </div>
+
+      <!-- Floating Bottom Preparation Bar -->
+      <div class="bottom-bar" id="bottom-bar">
+        <div class="cart-summary">
+          <div class="cart-count-label"><span id="cart-item-count">0</span> أصناف جديدة للتحضير</div>
+          <div class="cart-total-amount"><span id="cart-total-price">0</span> <small id="currency-tag">ج.م</small></div>
+        </div>
+        <button class="btn-prepare-order" id="btn-submit-order" onclick="submitTableOrder()">
+          <span>⚡</span>
+          <span>تحضير للبار</span>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Success Confirmation Modal -->
+  <div class="modal-overlay" id="success-modal">
+    <div class="modal-card">
+      <div class="modal-icon">☕🎉</div>
+      <h2 class="modal-title">تم إرسال الطلب للبار!</h2>
+      <p class="modal-desc">تم إرسال الأصناف بنجاح للبار وجاري طباعة بون التحضير وتحديث حساب الطاولة.</p>
+
+      <div class="modal-details-box" id="success-modal-details">
+        <div>الطاولة: <strong>طاولة ...</strong></div>
+        <div>الأصناف المرسلة: <strong>0 صنف</strong></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-modal-primary" onclick="continueSameTable()">
+          ➕ إضافة طلبات أخرى لنفس الترابيزة
+        </button>
+        <button class="btn-modal-secondary" id="modal-btn-switch-table" onclick="returnToTablesFromModal()" style="background: rgba(2,132,199,0.12); border-color: rgba(2,132,199,0.4); color: var(--primary); font-size:15px; padding:13px;">
+          🪑 اختيار ترابيزة تانية
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Element -->
+  <div class="toast-box" id="app-toast">تم التحديث</div>
+
+  <!-- Core App Logic -->
+  <script>
+    const PAGE_BUILD = '2026-10-07-r7';
+
+    // E5: HTML escape لمنع XSS في القوالب
+    function escapeHtml(v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // System State
+    const state = {
+      cafeName: 'تقفيلة كافيه',
+      currency: 'ج.م',
+      sections: [],
+      tables: [],
+      categories: [],
+      products: [],
+      activeTableCarts: {}, // { [tableId]: { items: [] } }
+      currentHall: 'all',
+      lockedHall: null,  // إذا فُتح بـ ?hall= يُغلق على هذه الصالة فقط
+      selectedTable: null,
+      tableCart: {}, // { [prodId]: { id, name, price, qty, notes } }
+      searchTableQuery: '',
+      searchMenuQuery: '',
+      currentCategory: 'all',
+      isSubmitting: false,
+      lastSyncTime: 0,
+      recentOrders: {} // E2: طاولة أرسل لها طلب حديثاً
+    };
+
+    // Parse URL params (?hall=... or ?table=... or ?tableId=... or ?token=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    let initialHallParam = urlParams.get('hall');
+    const initialTableParam = urlParams.get('table');
+    const initialTableIdParam = urlParams.get('tableId');
+    let waiterTokenParam = urlParams.get('token') || (function() { try { return sessionStorage.getItem('waiter_token'); } catch(e) { return ''; } })() || '';
+
+    // Handle legacy or malformed concatenated URL parameters (e.g. ?token=XYZ?hall=Name or ?token=XYZ&hall=Name)
+    if (waiterTokenParam) {
+      if (waiterTokenParam.includes('?hall=')) {
+        const parts = waiterTokenParam.split('?hall=');
+        waiterTokenParam = parts[0];
+        if (!initialHallParam && parts[1]) {
+          try { initialHallParam = decodeURIComponent(parts[1]); } catch(e) { initialHallParam = parts[1]; }
+        }
+      } else if (waiterTokenParam.includes('&hall=')) {
+        const parts = waiterTokenParam.split('&hall=');
+        waiterTokenParam = parts[0];
+        if (!initialHallParam && parts[1]) {
+          try { initialHallParam = decodeURIComponent(parts[1]); } catch(e) { initialHallParam = parts[1]; }
+        }
+      }
+    }
+    if (waiterTokenParam) { try { sessionStorage.setItem('waiter_token', waiterTokenParam); } catch(e) {} }
+    state.waiterToken = waiterTokenParam;
+
+    // Hall-lock mode: إذا فُتح الرابط بـ ?hall=صالةX تُغلق على تلك الصالة فقط
+    if (initialHallParam) {
+      state.lockedHall = initialHallParam;
+      state.currentHall = initialHallParam;
+      document.body.classList.add('hall-locked');
+      const lockEl = document.getElementById('hall-lock-label');
+      if (lockEl) lockEl.textContent = initialHallParam;
+      const subEl = document.getElementById('app-subtitle');
+      if (subEl) subEl.textContent = 'صالة ' + initialHallParam;
+    }
+
+    // =============================================
+    // THEME SYSTEM: Night Mode ⇄ Dark Mode
+    // =============================================
+    const THEME_KEY = 'waiter_theme_pref';
+
+    function applyTheme(theme) {
+      const body = document.body;
+      const btn = document.getElementById('btn-theme');
+      if (theme === 'dark') {
+        body.classList.add('theme-dark');
+        if (btn) {
+          btn.textContent = '🌑';
+          btn.title = 'التحويل لـ Night Mode (دافي)';
+        }
+      } else {
+        body.classList.remove('theme-dark');
+        if (btn) {
+          btn.textContent = '🌙';
+          btn.title = 'التحويل لـ Dark Mode (بارد)';
+        }
+      }
+      try { localStorage.setItem(THEME_KEY, theme); } catch(e) {}
+    }
+
+    function toggleTheme() {
+      const isDark = document.body.classList.contains('theme-dark');
+      const newTheme = isDark ? 'night' : 'dark';
+      applyTheme(newTheme);
+      showToast(newTheme === 'dark' ? '🌑 Dark Mode — OLED بارد' : '🌙 Night Mode — جو كافيه دافي');
+    }
+
+    // Apply saved theme on load
+    (function() {
+      try {
+        const saved = localStorage.getItem(THEME_KEY) || 'night';
+        applyTheme(saved);
+      } catch(e) { applyTheme('night'); }
+    })();
+
+    // Web Audio Chime (Offline)
+    function playBeep(type = 'success') {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'success') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+          osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.35);
+        } else {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, ctx.currentTime);
+          gain.gain.setValueAtTime(0.2, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.15);
+        }
+      } catch (e) {}
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('app-toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    // 1. Load Initial Data
+    async function loadInitialData() {
+      try {
+        const res = await fetch('/api/waiter/data');
+        if (!res.ok) throw new Error('فشل جلب بيانات الصالة');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'خطأ غير معروف');
+
+        state.cafeName = data.cafeName || 'تقفيلة كافيه';
+        state.currency = data.currency || 'ج.م';
+        state.sections = data.sections || [];
+        state.tables = data.tables || [];
+        state.categories = data.categories || [];
+        state.products = data.products || [];
+        state.activeTableCarts = data.activeTableCarts || {};
+
+        document.getElementById('app-cafe-name').innerText = state.cafeName;
+        document.getElementById('currency-tag').innerText = state.currency;
+
+        renderHallTabs();
+        renderTables();
+        renderMenuCategories();
+        renderProducts();
+
+        // Handle hall lock / initial params
+        if (state.lockedHall) {
+          state.currentHall = state.lockedHall;
+        } else if (initialHallParam) {
+          const matchTab = state.sections.find(s => s.name === initialHallParam);
+          if (matchTab) {
+            state.currentHall = matchTab.name;
+            updateActiveHallTabUI();
+          }
+        }
+        renderTables();
+
+        if (!state.selectedTable) {
+          let matchTbl = null;
+          if (initialTableIdParam) {
+            // E4: لو فيه tableId محدد ابحث به فقط
+            matchTbl = state.tables.find(t => String(t.id) === String(initialTableIdParam));
+            if (!matchTbl) {
+              showToast('كود الطاولة قديم، اطلب كود جديد من الكاشير');
+            }
+          } else if (initialTableParam && initialHallParam) {
+            // يسمح فقط لو فيه قسم ونتيجة واحدة
+            const candidates = state.tables.filter(t =>
+              String(t.hall) === String(initialHallParam) && (
+                String(t.number) === String(initialTableParam) ||
+                String(t.name) === String(initialTableParam) ||
+                String(t.id) === String(initialTableParam)
+              )
+            );
+            if (candidates.length === 1) matchTbl = candidates[0];
+          }
+          if (matchTbl) {
+            selectTable(matchTbl);
+          }
+        }
+
+        state.lastSyncTime = Date.now();
+        setOnlineStatus(true);
+      } catch (err) {
+        console.error('loadInitialData error:', err);
+        setOnlineStatus(false);
+      }
+    }
+
+    // 2. Poll Tables Periodically (Every 3 seconds for live sync + background full sync)
+    let livePollCounter = 0;
+    // E1: تتبع التسلسل لمنع رد قديم يكتب فوق حديث
+    let tablesReqSeq = 0, tablesAppliedSeq = 0, tablesFetching = false;
+    async function refreshTablesLive(force = false) {
+      if (tablesFetching && !force) return;
+      tablesFetching = true;
+      const mySeq = ++tablesReqSeq;
+      try {
+        livePollCounter++;
+        // Every 4 cycles (~12s), perform full sync to detect new products or new categories added in POS
+        if (livePollCounter % 4 === 0) {
+          try {
+            const fullRes = await fetch('/api/waiter/data');
+            if (fullRes.ok) {
+              const fullData = await fullRes.json();
+              if (fullData.success) {
+                if (Array.isArray(fullData.sections)) state.sections = fullData.sections;
+                if (Array.isArray(fullData.categories)) state.categories = fullData.categories;
+                if (Array.isArray(fullData.products)) state.products = fullData.products;
+                renderMenuCategories();
+              }
+            }
+          } catch (_) {}
+        }
+
+        const res = await fetch('/api/tables', { cache: 'no-store' });
+        if (!res.ok) throw new Error('فشل التحديث');
+        const data = await res.json();
+        // E1: لو جاء رد أحدث بعده، تجاهل هذا
+        if (mySeq < tablesAppliedSeq) return;
+        tablesAppliedSeq = mySeq;
+        if (data.success && Array.isArray(data.tables)) {
+          state.tables = data.tables;
+          if (data.sections) state.sections = data.sections;
+          state.activeTableCarts = data.activeTableCarts || {};
+
+          renderHallTabs();
+          renderTables();
+
+          // If currently inside a table, update its existing orders
+          if (state.selectedTable) {
+            const updatedSelected = state.tables.find(t => t.id === state.selectedTable.id);
+            if (updatedSelected) {
+              const hadItems = (state.selectedTable.activeItemsCount || 0) > 0 || state.selectedTable.status === 'occupied';
+              const hasNoItemsNow = (updatedSelected.activeItemsCount || 0) === 0 && updatedSelected.status === 'available';
+              state.selectedTable = updatedSelected;
+              renderExistingTableOrders();
+              if (hadItems && hasNoItemsNow) {
+                showToast('ℹ️ تم نقل طلب هذه الطاولة أو إغلاقه من قِبل الكاشير');
+              }
+            }
+          }
+          setOnlineStatus(true);
+        }
+      } catch (e) {
+        setOnlineStatus(false);
+      } finally {
+        tablesFetching = false;
+      }
+    }
+
+    function setOnlineStatus(isOnline) {
+      const badge = document.getElementById('online-status');
+      const label = document.getElementById('status-label');
+      if (isOnline) {
+        badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        badge.style.color = 'var(--success)';
+        badge.querySelector('.status-dot').style.background = 'var(--success)';
+        label.innerText = 'متصل بالسيستم';
+      } else {
+        badge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        badge.style.color = 'var(--danger)';
+        badge.querySelector('.status-dot').style.background = 'var(--danger)';
+        label.innerText = 'غير متصل (جاري المحاولة)';
+      }
+    }
+
+    async function refreshData(manual = false) {
+      if (manual) showToast('جاري التحديث الفوري...');
+      await refreshTablesLive();
+      if (manual) showToast('تم تحديث الطاولات بنجاح');
+    }
+
+    function safeSetText(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.innerText = val;
+    }
+
+    // Render Hall Tabs
+    function renderHallTabs() {
+      const container = document.getElementById('hall-tabs-container');
+      const allCount = state.tables.length;
+      safeSetText('count-badge-all', allCount);
+
+      // Collect sections
+      const sectionsMap = new Map();
+      state.sections.forEach(s => sectionsMap.set(s.name, 0));
+      state.tables.forEach(t => {
+        const h = t.hall || 'عام';
+        sectionsMap.set(h, (sectionsMap.get(h) || 0) + 1);
+      });
+
+      // Keep "All" button intact, append specific halls
+      let html = `
+        <button class="hall-tab-btn ${state.currentHall === 'all' ? 'active' : ''}" onclick="switchHall('all', this)">
+          🌟 كل الصالات
+          <span class="hall-tab-badge" id="count-badge-all">${allCount}</span>
+        </button>
+      `;
+
+      sectionsMap.forEach((count, name) => {
+        const isActive = state.currentHall === name;
+        html += `
+          <button class="hall-tab-btn ${isActive ? 'active' : ''}" onclick="switchHall('${name}', this)">
+            🪑 صالة ${name}
+            <span class="hall-tab-badge">${count}</span>
+          </button>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function switchHall(hallName, btnEl) {
+      state.currentHall = hallName;
+      updateActiveHallTabUI();
+      renderTables();
+    }
+
+    function updateActiveHallTabUI() {
+      document.querySelectorAll('.hall-tab-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = Array.from(document.querySelectorAll('.hall-tab-btn')).find(b => {
+        if (state.currentHall === 'all') return b.innerText.includes('كل الصالات');
+        return b.innerText.includes(state.currentHall);
+      });
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    function onTablesSearchChange(val) {
+      state.searchTableQuery = val.trim().toLowerCase();
+      renderTables();
+    }
+
+    function isTableOccupied(tbl) {
+      if (!tbl) return false;
+      // إذا كانت الطاولة أصبحت متاحة رسمياً وبدون أصناف (مثل نقل الطلب لطاولة أخرى)، مسح أي علامة طلب سابقة فوراً
+      if (tbl.status === 'available' && (!tbl.activeItemsCount || tbl.activeItemsCount === 0)) {
+        delete state.recentOrders[tbl.id];
+        return false;
+      }
+      const recentOrder = Date.now() - (state.recentOrders[tbl.id] || 0) < 15000;
+      return tbl.status === 'occupied' || (tbl.activeItemsCount && tbl.activeItemsCount > 0) || recentOrder;
+    }
+
+    // Render Tables — Full-Width List
+    function renderTables() {
+      const container = document.getElementById('tables-grid');
+      const q = state.searchTableQuery;
+
+      // في وضع الصالة المغلقة استخدم الصالة المقيّدة دائماً
+      const activeHall = state.lockedHall || state.currentHall;
+
+      const filtered = state.tables.filter(tbl => {
+        const matchesHall = activeHall === 'all' || (tbl.hall || 'عام') === activeHall;
+        const matchesQuery = !q ||
+          (tbl.name && tbl.name.toLowerCase().includes(q)) ||
+          (tbl.number && String(tbl.number).toLowerCase().includes(q));
+        return matchesHall && matchesQuery;
+      });
+
+      // Sort: occupied first then available
+      filtered.sort((a, b) => {
+        const aOcc = isTableOccupied(a);
+        const bOcc = isTableOccupied(b);
+        if (aOcc === bOcc) return 0;
+        return aOcc ? -1 : 1;
+      });
+
+      // Update stats
+      const total = filtered.length;
+      const occupiedCount = filtered.filter(t => isTableOccupied(t)).length;
+      const availCount = total - occupiedCount;
+
+      safeSetText('stat-total-count', total);
+      safeSetText('stat-avail-count', availCount);
+      safeSetText('stat-occ-count', occupiedCount);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🪑</div>
+            <div>${state.lockedHall ? 'لا توجد ترابيزات في صالة ' + state.lockedHall : 'لا توجد طاولات مطابقة'}</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(tbl => {
+        const isOccupied = isTableOccupied(tbl);
+        const isQrDisabled = tbl.qr_enabled === 0 || tbl.qr_enabled === false;
+        const activeCount = tbl.activeItemsCount || 0;
+        const activeTotal = tbl.activeTotal || 0;
+
+        return `
+          <div class="table-card ${isQrDisabled ? 'disabled-table' : (isOccupied ? 'occupied' : 'available')}" onclick="selectTableById(${tbl.id})" style="${isQrDisabled ? 'opacity: 0.7; border: 1.5px dashed #ef4444;' : ''}">
+            <div class="table-card-left">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;">
+                <span class="table-code-badge">${tbl.number || ('#' + tbl.id)}</span>
+                ${!state.lockedHall ? `<span style="font-size:11px;color:var(--text-dim);">${escapeHtml(tbl.hall || 'صالة عامة')}</span>` : ''}
+              </div>
+              <div class="table-title">${escapeHtml(tbl.name || ('طاولة ' + tbl.number))}</div>
+              <div class="table-meta-row">
+                <span>👥 ${tbl.capacity || 4} أفراد</span>
+                ${activeCount > 0 ? `<span class="table-active-badge">🛒 ${activeCount} صنف · ${activeTotal} ${escapeHtml(state.currency)}</span>` : ''}
+              </div>
+            </div>
+            <div class="table-card-right">
+              ${isQrDisabled
+                ? `<span class="table-status-tag" style="background:#fee2e2;color:#dc2626;font-weight:bold;">🚫 معطلة للطلب</span>`
+                : `<span class="table-status-tag">${isOccupied ? '🔴 مشغول' : '🟢 متاح'}</span>`}
+            </div>
+            <span class="table-card-arrow">${isQrDisabled ? '🚫' : '‹'}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectTableById(id) {
+      const tbl = state.tables.find(t => t.id === id);
+      if (tbl) selectTable(tbl);
+    }
+
+    // Select Table & Switch to Screen 2
+    function selectTable(tbl) {
+      if (tbl.qr_enabled === 0 || tbl.qr_enabled === false) {
+        alert('⚠️ الطاولة "' + (tbl.name || tbl.number) + '" معطلة حالياً من قِبل الكاشير/الإدارة ولا يمكن فتحها للطلب.');
+        return;
+      }
+      state.selectedTable = tbl;
+      state.tableCart = {}; // reset new items cart for this table
+
+      safeSetText('selected-table-name', tbl.name || ('طاولة ' + tbl.number));
+      safeSetText('selected-table-hall', 'الصالة: ' + (tbl.hall || 'عام') + ' | ' + (tbl.capacity || 4) + ' أفراد');
+
+      renderExistingTableOrders();
+      renderProducts();
+      updateCartBottomBar();
+
+      // Switch screen
+      document.getElementById('screen-tables').classList.remove('active');
+      document.getElementById('screen-order').classList.add('active');
+      window.scrollTo(0, 0);
+      playBeep('click');
+    }
+
+    function returnToTables() {
+      const newItemsCount = Object.values(state.tableCart).reduce((sum, it) => sum + it.qty, 0);
+      if (newItemsCount > 0) {
+        if (!confirm('⚠️ في أصناف جديدة لسه متبعتش للبار، هتخرج بدون ما تبعتها؟')) {
+          return;
+        }
+      }
+
+      state.selectedTable = null;
+      state.tableCart = {};
+      updateCartBottomBar();
+      renderHallTabs();
+      renderTables();
+
+      document.getElementById('screen-order').classList.remove('active');
+      document.getElementById('screen-tables').classList.add('active');
+      window.scrollTo(0, 0);
+      refreshTablesLive();
+    }
+
+    // Render Existing Orders for Table
+    function renderExistingTableOrders() {
+      const banner = document.getElementById('existing-orders-banner');
+      const listEl = document.getElementById('existing-items-list');
+      const headerText = document.getElementById('existing-orders-header-text');
+
+      if (!state.selectedTable) {
+        banner.style.display = 'none';
+        return;
+      }
+
+      // Check active items from state.activeTableCarts or table object
+      const tblId = state.selectedTable.id;
+      const cartObj = state.activeTableCarts[tblId] || state.selectedTable.activeCart;
+      const items = (cartObj && Array.isArray(cartObj.items)) ? cartObj.items : (state.selectedTable.activeItems || []);
+
+      if (items.length === 0) {
+        banner.style.display = 'none';
+        listEl.innerHTML = '';
+        return;
+      }
+
+      banner.style.display = 'block';
+      const totalCount = items.reduce((s, it) => s + (Number(it.qty) || 1), 0);
+      const totalPrice = items.reduce((s, it) => s + ((Number(it.price) || 0) * (Number(it.qty) || 1)), 0);
+
+      headerText.innerText = `أصناف مسجلة على الطاولة (${totalCount} صنف - ${totalPrice} ${state.currency})`;
+
+      listEl.innerHTML = items.map(it => `
+        <div class="existing-item-row">
+          <div>
+            <span class="qty-badge">${it.qty}×</span>
+            <span>${escapeHtml(it.name || it.product_name)}</span>
+            ${it.notes ? `<div style="font-size: 11px; color: var(--danger); margin-right: 20px;">ملاحظة: ${escapeHtml(it.notes)}</div>` : ''}
+          </div>
+          <span style="font-weight: 700; color: var(--text-muted);">${(it.price * it.qty)} ${escapeHtml(state.currency)}</span>
+        </div>
+      `).join('');
+    }
+
+    function toggleExistingList() {
+      const listEl = document.getElementById('existing-items-list');
+      const arrow = document.getElementById('existing-toggle-arrow');
+      if (listEl.style.display === 'none') {
+        listEl.style.display = 'block';
+        arrow.innerText = '▼';
+      } else {
+        listEl.style.display = 'none';
+        arrow.innerText = '◀';
+      }
+    }
+
+    // Menu Categories
+    function renderMenuCategories() {
+      const container = document.getElementById('category-scroll-bar');
+      let html = `<button class="cat-pill active" onclick="switchCategory('all', this)">الكل</button>`;
+      state.categories.forEach(cat => {
+        html += `
+          <button class="cat-pill" onclick="switchCategory(${cat.id}, this)">
+            <span>${escapeHtml(cat.icon || '☕')}</span>
+            <span>${escapeHtml(cat.name)}</span>
+          </button>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function switchCategory(catId, btnEl) {
+      state.currentCategory = catId;
+      document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+      renderProducts();
+    }
+
+    function onMenuSearchChange(val) {
+      state.searchMenuQuery = val.trim().toLowerCase();
+      renderProducts();
+    }
+
+    // Render Products
+    function renderProducts() {
+      const container = document.getElementById('products-list');
+      const q = state.searchMenuQuery;
+
+      const filtered = state.products.filter(p => {
+        const matchesCat = state.currentCategory === 'all' || Number(p.category_id) === Number(state.currentCategory);
+        const matchesQuery = !q || (p.name && p.name.toLowerCase().includes(q));
+        return matchesCat && matchesQuery;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <div>لا توجد أصناف مطابقة للبحث</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(prod => {
+        const inCart = state.tableCart[prod.id] ? state.tableCart[prod.id].qty : 0;
+        const noteVal = state.tableCart[prod.id] ? (state.tableCart[prod.id].notes || '') : '';
+
+        return `
+          <div class="product-row-card ${inCart > 0 ? 'in-cart' : ''}">
+            <div class="prod-main-info">
+              <div class="prod-title">${escapeHtml(prod.name)}</div>
+              <div class="prod-price">${prod.price} ${escapeHtml(state.currency)}</div>
+              <div class="btn-toggle-note" onclick="toggleItemNote(${prod.id})">
+                <span>✏️</span>
+                <span>${noteVal ? 'تعديل الملاحظة: ' + escapeHtml(noteVal) : 'إضافة ملاحظة خاصة'}</span>
+              </div>
+              <input type="text"
+                id="item-note-${prod.id}"
+                class="item-note-field ${noteVal ? 'visible' : ''}"
+                placeholder="مثال: سكر خفيف، بدون ثلج، ميكس فواكه..."
+                value="${escapeHtml(noteVal)}"
+                oninput="updateItemNote(${prod.id}, this.value)"
+              />
+            </div>
+
+            <div class="qty-controls">
+              ${inCart > 0 ? `
+                <button class="btn-circle minus" onclick="changeProductQty(${prod.id}, -1)">-</button>
+                <span class="qty-display">${inCart}</span>
+              ` : ''}
+              <button class="btn-circle add" onclick="changeProductQty(${prod.id}, 1)">+</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleItemNote(prodId) {
+      const input = document.getElementById(`item-note-${prodId}`);
+      if (input) {
+        input.classList.toggle('visible');
+        if (input.classList.contains('visible')) {
+          input.focus();
+        }
+      }
+    }
+
+    function updateItemNote(prodId, text) {
+      if (state.tableCart[prodId]) {
+        state.tableCart[prodId].notes = text;
+      }
+    }
+
+    function changeProductQty(prodId, delta) {
+      const prod = state.products.find(p => p.id === prodId);
+      if (!prod) return;
+
+      const current = state.tableCart[prodId] ? state.tableCart[prodId].qty : 0;
+      const next = current + delta;
+
+      if (next <= 0) {
+        delete state.tableCart[prodId];
+      } else {
+        const existingNotes = state.tableCart[prodId] ? state.tableCart[prodId].notes : '';
+        const noteInput = document.getElementById(`item-note-${prodId}`);
+        const inputVal = noteInput ? noteInput.value : '';
+
+        state.tableCart[prodId] = {
+          id: prod.id,
+          name: prod.name,
+          price: prod.price,
+          qty: next,
+          notes: existingNotes || inputVal || ''
+        };
+      }
+
+      playBeep('click');
+      updateCartBottomBar();
+      renderProducts();
+    }
+
+    function updateCartBottomBar() {
+      const items = Object.values(state.tableCart);
+      const count = items.reduce((sum, it) => sum + it.qty, 0);
+      const total = items.reduce((sum, it) => sum + (it.price * it.qty), 0);
+
+      const bar = document.getElementById('bottom-bar');
+      if (count > 0) {
+        bar.classList.add('visible');
+        document.getElementById('cart-item-count').innerText = count;
+        document.getElementById('cart-total-price').innerText = total;
+      } else {
+        bar.classList.remove('visible');
+      }
+    }
+
+    // Submit Order to Bar ("تحضير")
+    async function submitTableOrder() {
+      if (state.isSubmitting) return;
+      if (!state.selectedTable) return;
+
+      const items = Object.values(state.tableCart);
+      if (items.length === 0) {
+        alert('الرجاء اختيار أصناف أولاً لإرسالها للتحضير');
+        return;
+      }
+
+      // E3: clientOrderId مربوط بمحتوى الطلب
+      const sig = state.selectedTable.id + '|' + Object.values(state.tableCart).map(i => i.id + ':' + i.qty + ':' + (i.notes || '')).sort().join(',');
+      if (!state.pendingOrderId || state.pendingOrderSig !== sig) {
+        state.pendingOrderId = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+        state.pendingOrderSig = sig;
+      }
+      const clientOrderId = state.pendingOrderId;
+
+      const btn = document.getElementById('btn-submit-order');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span><span>جاري التحضير...</span>';
+      state.isSubmitting = true;
+
+      try {
+        const payload = {
+          table: state.selectedTable.number || state.selectedTable.name || state.selectedTable.id,
+          tableId: state.selectedTable.id,
+          hall: state.selectedTable.hall || '',
+          customerName: '',
+          clientOrderId,
+          notes: 'طلب كابتن صالة (موبايل)',
+          items: items.map(it => ({
+            id: it.id,
+            name: it.name,
+            qty: it.qty,
+            price: it.price,
+            notes: it.notes || ''
+          }))
+        };
+
+        // Headers only support ByteString (ISO-8859-1). If waiterToken contains non-ASCII, encodeURIComponent it.
+        const safeHeaderToken = state.waiterToken ? encodeURIComponent(state.waiterToken) : '';
+        const res = await fetch('/api/qr-order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(safeHeaderToken ? { 'x-waiter-token': safeHeaderToken } : {})
+          },
+          body: JSON.stringify({
+            ...payload,
+            ...(state.waiterToken ? { waiter_token: state.waiterToken } : {})
+          })
+        });
+
+        // E7: رفض 409/404 → refresh فوري
+        if (res.status === 409 || res.status === 404) {
+          refreshTablesLive(true);
+        }
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'تعذر إرسال الطلب');
+
+        playBeep('success');
+
+        // E2: سجّل وقت آخر طلب لهذه الطاولة
+        state.recentOrders[state.selectedTable.id] = Date.now();
+
+        // Mark table locally as occupied with updated items
+        state.selectedTable.status = 'occupied';
+        const existingEntry = { items: (state.selectedTable.activeItems || []).map(x => ({ ...x })) };
+        items.forEach(incoming => {
+          const matchIdx = existingEntry.items.findIndex(it => it.id === incoming.id && (it.notes || '') === (incoming.notes || ''));
+          if (matchIdx >= 0) {
+            existingEntry.items[matchIdx].qty += incoming.qty;
+          } else {
+            existingEntry.items.push({ ...incoming });
+          }
+        });
+        state.activeTableCarts[state.selectedTable.id] = existingEntry;
+
+        const tblMatch = state.tables.find(t => t.id === state.selectedTable.id);
+        if (tblMatch) {
+          tblMatch.status = 'occupied';
+          tblMatch.activeItemsCount = existingEntry.items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
+          tblMatch.activeTotal = existingEntry.items.reduce((s, it) => s + ((Number(it.price) || 0) * (Number(it.qty) || 0)), 0);
+          tblMatch.activeItems = existingEntry.items;
+          tblMatch.activeCart = existingEntry;
+        }
+
+        state.pendingOrderId = null;
+        state.pendingOrderSig = null;
+        state.tableCart = {};
+        updateCartBottomBar();
+        renderExistingTableOrders();
+
+        // Show Success Modal Immediately
+        document.getElementById('success-modal-details').innerHTML = `
+          <div>الطاولة: <strong>${escapeHtml(data.tableName || state.selectedTable.name)} (${escapeHtml(state.selectedTable.hall || 'صالة')})</strong></div>
+          <div>الأصناف المرسلة: <strong>${items.length} أصناف — إجمالي الكمية: ${items.reduce((s, it) => s + it.qty, 0)}</strong></div>
+          <div style="color: var(--success); margin-top: 6px; font-size:13px;">✅ تم إرسال البون فوراً لطابعة البار</div>
+        `;
+        document.getElementById('success-modal').classList.add('active');
+
+        const btnBack = document.getElementById('modal-btn-switch-table');
+        if (btnBack) {
+          btnBack.textContent = state.lockedHall
+            ? '🪑 اختيار ترابيزة تانية في صالة ' + state.lockedHall
+            : '🪑 اختيار طاولة أخرى (الرجوع للصالات)';
+        }
+
+        // Background updates (non-blocking)
+        renderHallTabs();
+        renderTables();
+        renderProducts();
+        setTimeout(() => refreshTablesLive(true), 50);
+
+      } catch (err) {
+        alert('❌ حدث خطأ: ' + (err.message || 'تعذر إرسال الطلب للبار'));
+      } finally {
+        state.isSubmitting = false;
+        btn.disabled = false;
+        btn.innerHTML = '<span>⚡</span><span>تحضير للبار</span>';
+      }
+    }
+
+    function continueSameTable() {
+      document.getElementById('success-modal').classList.remove('active');
+      showToast('يمكنك الآن إضافة أصناف أخرى لنفس الطاولة');
+    }
+
+    function returnToTablesFromModal() {
+      document.getElementById('success-modal').classList.remove('active');
+      returnToTables();
+    }
+
+    // Auto-polling interval for live table status updates (every 2 seconds for real-time responsiveness)
+    // هذا يضمن: أي ترابيزة يضيفها أو يحذفها أو يفضيها الكاشير تظهر فوراً
+    setInterval(() => {
+      refreshTablesLive();
+    }, 2000);
+
+    // Initial Start
+    loadInitialData();
+  </script>
+  <div id="page-build-indicator" style="position:fixed; bottom:2px; left:4px; font-size:9px; opacity:.5; z-index:99999; pointer-events:none; font-family:monospace; color:#888;">2026-10-07-r7</div>
+</body>
+</html>

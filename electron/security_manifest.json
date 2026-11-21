@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "generatedAt": "2026-11-21T00:39:15.045Z",
+  "legalNotice": "Protected by Ed25519 Signed Anti-Tamper Fail-Closed Security",
+  "files": {
+    "preload.js": "eda1d77f4a4e1faba6f74e869cf53364d81a20c953b0a9a71c67b5d620114a92",
+    "security.js": "fa2a1e2501eafc364dd3eebced39b4df88db3aafa07cf1f2a863a7165981bfbc",
+    "main.js": "3b8e0750b7a66edffd3066baabfde05c9f090686b1271bc040b12e5ff5f0323b",
+    "db.js": "0e4487799058840ff0612420ac9eb66dfdccdaec4ced5074b9f4a8a1cc480643",
+    "mobileApi.js": "eeb28696b3c7285aeda7ebbe987261ecd3498ec456da626b4bbaf88fa4cbc93e",
+    "finance.js": "25f759a038be5453a8081faaa676c6d96fcef1e3b64154f59915e34a3dae8d84",
+    "updater.js": "0e33744548704f604ddd2dc0bf857755ec7d6f32f496b01cdc522df0235ff510",
+    "db/licensing.js": "6641729f78918ccc5a74e92da9a892332e50b39156c53f0c51003c18af0a5252",
+    "db/integrity.js": "5de1179741bdacbce2fd30d45d660ab869e1b716e961aaeb1a67a10096c19d50",
+    "db/health.js": "aef556437b5e65a190f08b256c14d74fcd06f1b0b318eba900ee72517ad4723d"
+  },
+  "signature": "elZR8Q69FiTC2murx+JaoFGknoT+ehDbhLa5J4iuRqvHfpizVs9rql7akmm8SA3ppV+zQn1+KNDIN+9GdJKEBw=="
+}

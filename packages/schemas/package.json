@@ -1,0 +1,10 @@
+{
+  "name": "@taqfeela/schemas",
+  "version": "1.0.0",
+  "description": "Shared Zod schemas and validation for Taqfeela Desktop, Mobile, and Cloud",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}
